@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 from _version import __version__
 
@@ -22,6 +22,8 @@ setup(
         "Natural Language :: English",
         "Programming Language :: Python",
     ],
+    packages=find_packages(exclude=["tests*"]),
     install_requires=["python-monerorpc>=0.5.8"],
+    extras_require={"test": ["mock", "pytest"]},
     py_modules=["monero_health"],
 )
