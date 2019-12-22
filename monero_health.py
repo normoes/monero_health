@@ -1,9 +1,15 @@
-from monerorpc.authproxy import AuthServiceProxy, JSONRPCException
 import logging
 import datetime
 import os
 import sys
 import json
+
+from monerorpc.authproxy import AuthServiceProxy, JSONRPCException
+from requests.exceptions import (
+    ConnectionError as RequestsConnectionError,
+    ReadTimeout,
+    Timeout,
+)
 
 logging.basicConfig()
 logger = logging.getLogger("DaemonHealth")
@@ -67,13 +73,13 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
         block_recent, offset, offset_unit = is_timestamp_within_offset(timestamp=timestamp_obj, now=check_timestamp, offset=offset, offset_unit=offset_unit)
 
         response = {"hash": last_block_hash, "block_timestamp": timestamp_obj.isoformat(), "check_timestamp": check_timestamp.isoformat(), "block_recent": block_recent, "block_recent_offset": offset, "block_recent_offset_unit": offset_unit}
-    except (JSONRPCException) as e:
+    except (JSONRPCException, RequestsConnectionError, ReadTimeout, Timeout) as e:
         error = {"error": str(e)}
 
     if not response:
         if not error:
             error = {"error": f"No response from daemon '{url}:{port}'."}
-        response = {"block_recent": False, "block_recent_offset": offset, "block_recent_offset_unit": offset_unit}
+        response = {"block_recent": block_recent, "block_recent_offset": offset, "block_recent_offset_unit": offset_unit}
         response.update(error)
 
     if not block_recent or error:
@@ -102,7 +108,7 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD,
         version = hard_fork_info["version"]
 
         response = {"status": status, "version": version}
-    except (JSONRPCException) as e:
+    except (JSONRPCException, RequestsConnectionError, ReadTimeout, Timeout) as e:
         error = {"error": str(e)}
 
     if not response:
