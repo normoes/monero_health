@@ -4,10 +4,14 @@ import logging
 import json
 
 from monerorpc.authproxy import JSONRPCException
+from requests.exceptions import (
+    ConnectionError as RequestsConnectionError,
+    ReadTimeout,
+    Timeout,
+)
 
 from monero_health import (
     daemon_last_block_check,
-    daemon_status_check,
 )
 
 @mock.patch("monero_health.AuthServiceProxy")
@@ -91,65 +95,85 @@ def test_last_block_not_recent_rpc_error(mock_time_range, mock_monero_rpc, caplo
     caplog.clear()
 
 @mock.patch("monero_health.AuthServiceProxy")
-def test_daemon_status_ok(mock_monero_rpc, caplog):
-    mock_monero_rpc.return_value.hard_fork_info.return_value = {
-        "status": "OK",
-        "version": "12",
-    }
-    
-    response = daemon_status_check()
+@mock.patch("monero_health.is_timestamp_within_offset")
+def test_last_block_not_recent_read_timeout(mock_time_range, mock_monero_rpc, caplog):
+    """Raises a requests.exceptions.ReadTimeout
 
-    assert response["status"] == "OK"
-    assert response["version"] == "12"
-
-    assert len(caplog.records) == 1
-    for record in caplog.records:
-        assert record.levelname == "INFO", "Wrong log message."
-        assert record.message == "Checking '127.0.0.1:18081'.", "Wrong log message."
-    caplog.clear()
-
-@mock.patch("monero_health.AuthServiceProxy")
-def test_daemon_status_not_ok(mock_monero_rpc, caplog):
-    mock_monero_rpc.return_value.hard_fork_info.return_value = {
-        "status": "ERROR",
-        "version": "12",
-    }
-    caplog.set_level(logging.ERROR, logger="DaemonHealth")
-    
-    response = daemon_status_check()
-
-    assert response["status"] == "ERROR"
-    assert response["version"] == "12"
-
-    assert len(caplog.records) == 1
-    for record in caplog.records:
-        assert record.levelname == "ERROR", "Wrong log message."
-        json_message = json.loads(record.message)
-        assert not "error" in json_message, "Wrong log message."
-        assert "message" in json_message, "Wrong log message."
-        assert json_message["message"] == "Dameon status is 'ERROR'. Daemon: '127.0.0.1:18081'.", "Wrong log message."
-    caplog.clear()
-
-@mock.patch("monero_health.AuthServiceProxy")
-def test_daemon_status_not_ok_rpc_error(mock_monero_rpc, caplog):
-    """Raises a JSONRPCException.
-
-    Source: https://github.com/monero-ecosystem/python-monerorpc/blob/master/monerorpc/authproxy.py
     """
 
-    mock_monero_rpc.side_effect = JSONRPCException(rpc_error={"message": "Some Monero RPC error.", "code": 11})
+    mock_monero_rpc.side_effect = ReadTimeout("Request timed out when reading response.")
+    mock_time_range.return_value = (True, 12, "minutes")
 
-    response = daemon_status_check()
+    response = daemon_last_block_check()
 
-    assert response["status"] == "ERROR"
-    assert response["error"] == "11: Some Monero RPC error."
+    assert response["block_recent"] == False
+    assert response["block_recent_offset"] == 12
+    assert response["block_recent_offset_unit"] == "minutes"
+
+    assert response["error"] == "Request timed out when reading response."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "ERROR", "Wrong log message."
         json_message = json.loads(record.message)
         assert "message" in json_message, "Wrong log message."
-        assert json_message["message"] == "Dameon status is 'ERROR'. Daemon: '127.0.0.1:18081'.", "Wrong log message."
+        assert json_message["message"] == "Last block's timestamp is '12 [minutes]' old. Daemon: '127.0.0.1:18081'.", "Wrong log message."
         assert "error" in json_message, "Wrong log message."
-        assert json_message["error"] == "11: Some Monero RPC error.", "Wrong log message."
+        assert json_message["error"] == "Request timed out when reading response.", "Wrong log message."
+    caplog.clear()
+
+@mock.patch("monero_health.AuthServiceProxy")
+@mock.patch("monero_health.is_timestamp_within_offset")
+def test_last_block_not_recent_connection_error(mock_time_range, mock_monero_rpc, caplog):
+    """Raises a requests.exceptions.ConnectionError
+
+    """
+
+    mock_monero_rpc.side_effect = RequestsConnectionError("Error when connecting.")
+    mock_time_range.return_value = (True, 12, "minutes")
+
+    response = daemon_last_block_check()
+
+    assert response["block_recent"] == False
+    assert response["block_recent_offset"] == 12
+    assert response["block_recent_offset_unit"] == "minutes"
+
+    assert response["error"] == "Error when connecting."
+
+    assert len(caplog.records) == 1
+    for record in caplog.records:
+        assert record.levelname == "ERROR", "Wrong log message."
+        json_message = json.loads(record.message)
+        assert "message" in json_message, "Wrong log message."
+        assert json_message["message"] == "Last block's timestamp is '12 [minutes]' old. Daemon: '127.0.0.1:18081'.", "Wrong log message."
+        assert "error" in json_message, "Wrong log message."
+        assert json_message["error"] == "Error when connecting.", "Wrong log message."
+    caplog.clear()
+
+@mock.patch("monero_health.AuthServiceProxy")
+@mock.patch("monero_health.is_timestamp_within_offset")
+def test_last_block_not_recent_timeout(mock_time_range, mock_monero_rpc, caplog):
+    """Raises a requests.exceptions.Timeout
+
+    """
+
+    mock_monero_rpc.side_effect = Timeout("Request timed out.")
+    mock_time_range.return_value = (True, 12, "minutes")
+
+    response = daemon_last_block_check()
+
+    assert response["block_recent"] == False
+    assert response["block_recent_offset"] == 12
+    assert response["block_recent_offset_unit"] == "minutes"
+
+    assert response["error"] == "Request timed out."
+
+    assert len(caplog.records) == 1
+    for record in caplog.records:
+        assert record.levelname == "ERROR", "Wrong log message."
+        json_message = json.loads(record.message)
+        assert "message" in json_message, "Wrong log message."
+        assert json_message["message"] == "Last block's timestamp is '12 [minutes]' old. Daemon: '127.0.0.1:18081'.", "Wrong log message."
+        assert "error" in json_message, "Wrong log message."
+        assert json_message["error"] == "Request timed out.", "Wrong log message."
     caplog.clear()
