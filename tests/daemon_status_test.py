@@ -66,7 +66,10 @@ def test_daemon_status_not_ok_rpc_error(mock_monero_rpc, caplog):
     response = daemon_status_check()
 
     assert response["status"] == "ERROR"
-    assert response["error"] == "11: Some Monero RPC error."
+    assert "error" in response
+    assert "error" in response["error"]
+    assert "message" in response["error"]
+    assert response["error"]["error"] == "11: Some Monero RPC error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -89,7 +92,10 @@ def test_daemon_status_not_ok_read_timeout(mock_monero_rpc, caplog):
     response = daemon_status_check()
 
     assert response["status"] == "ERROR"
-    assert response["error"] == "Request timed out when reading response."
+    assert "error" in response
+    assert "error" in response["error"]
+    assert "message" in response["error"]
+    assert response["error"]["error"] == "Request timed out when reading response."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -112,7 +118,10 @@ def test_daemon_status_not_ok_connection_error(mock_monero_rpc, caplog):
     response = daemon_status_check()
 
     assert response["status"] == "ERROR"
-    assert response["error"] == "Error when connecting."
+    assert "error" in response
+    assert "error" in response["error"]
+    assert "message" in response["error"]
+    assert response["error"]["error"] == "Error when connecting."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -135,7 +144,10 @@ def test_daemon_status_not_ok_timeout(mock_monero_rpc, caplog):
     response = daemon_status_check()
 
     assert response["status"] == "ERROR"
-    assert response["error"] == "Request timed out."
+    assert "error" in response
+    assert "error" in response["error"]
+    assert "message" in response["error"]
+    assert response["error"]["error"] == "Request timed out."
 
     assert len(caplog.records) == 1
     for record in caplog.records:

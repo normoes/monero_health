@@ -82,7 +82,11 @@ def test_last_block_not_recent_rpc_error(mock_time_range, mock_monero_rpc, caplo
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
 
-    assert response["error"] == "11: Some Monero RPC error."
+    assert response["status"] == "ERROR"
+    assert "error" in response
+    assert "error" in response["error"]
+    assert "message" in response["error"]
+    assert response["error"]["error"] == "11: Some Monero RPC error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -110,7 +114,11 @@ def test_last_block_not_recent_read_timeout(mock_time_range, mock_monero_rpc, ca
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
 
-    assert response["error"] == "Request timed out when reading response."
+    assert response["status"] == "ERROR"
+    assert "error" in response
+    assert "error" in response["error"]
+    assert "message" in response["error"]
+    assert response["error"]["error"] == "Request timed out when reading response."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -138,7 +146,11 @@ def test_last_block_not_recent_connection_error(mock_time_range, mock_monero_rpc
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
 
-    assert response["error"] == "Error when connecting."
+    assert response["status"] == "ERROR"
+    assert "error" in response
+    assert "error" in response["error"]
+    assert "message" in response["error"]
+    assert response["error"]["error"] == "Error when connecting."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -166,7 +178,11 @@ def test_last_block_not_recent_timeout(mock_time_range, mock_monero_rpc, caplog)
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
 
-    assert response["error"] == "Request timed out."
+    assert response["status"] == "ERROR"
+    assert "error" in response
+    assert "error" in response["error"]
+    assert "message" in response["error"]
+    assert response["error"]["error"] == "Request timed out."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
