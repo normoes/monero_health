@@ -56,11 +56,16 @@ def test_last_block_not_recent_timestamp_old(mock_time_range, mock_monero_rpc, c
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
 
+    assert response["status"] == "ERROR"
+    assert "error" in response
+    assert "error" in response["error"]
+    assert "message" in response["error"]
+    assert response["error"]["error"] == "Last block's timestamp is '12 [minutes]' old.", "Wrong error."
+
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "ERROR", "Wrong log message."
         json_message = json.loads(record.message)
-        assert not "error" in json_message, "Wrong log message."
         assert "message" in json_message, "Wrong log message."
         assert json_message["message"] == "Last block's timestamp is '12 [minutes]' old. Daemon: '127.0.0.1:18081'.", "Wrong log message."
     caplog.clear()

@@ -45,11 +45,16 @@ def test_daemon_status_not_ok(mock_monero_rpc, caplog):
     assert response["status"] == "ERROR"
     assert response["version"] == "12"
 
+    assert response["status"] == "ERROR"
+    assert "error" in response
+    assert "error" in response["error"]
+    assert "message" in response["error"]
+    assert response["error"]["error"] == "Dameon status is 'ERROR'.", "Wrong error."
+
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "ERROR", "Wrong log message."
         json_message = json.loads(record.message)
-        assert not "error" in json_message, "Wrong log message."
         assert "message" in json_message, "Wrong log message."
         assert json_message["message"] == "Dameon status is 'ERROR'. Daemon: '127.0.0.1:18081'.", "Wrong log message."
     caplog.clear()

@@ -97,8 +97,9 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
 
     if status == DAEMON_STATUS_ERROR or error:
         data = {"message": f"Last block's timestamp is '{offset} [{offset_unit}]' old. Daemon: '{url}:{port}'."}
-        if error:
-            data.update(error)
+        if not error:
+            error = {"error": f"Last block's timestamp is '{offset} [{offset_unit}]' old."}
+        data.update(error)
         response.update({"error": data})
         logger.error(json.dumps(data))
 
@@ -137,8 +138,9 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
 
     if status == DAEMON_STATUS_ERROR or error:
         data = {"message": f"Dameon status is '{status}'. Daemon: '{url}:{port}'."}
-        if error:
-            data.update(error)
+        if not error:
+            error = {"error": f"Dameon status is '{status}'."}
+        data.update(error)
         response.update({"error": data})
         logger.error(json.dumps(data))
 
