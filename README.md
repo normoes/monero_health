@@ -5,7 +5,7 @@ This is work in progress.
 Monero health is supposed to provide information about the Monero daemon health.
 
 There are two health checks at the moment:
-* Checking the Monero daemon status using the `get_info` RPC.
+* Checking the Monero daemon status using the `hard_fork_info` RPC.
 * Checking the age of the last block on the daemon using a pre-configured offset.
 
 ## Configuration

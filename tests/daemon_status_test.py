@@ -21,13 +21,13 @@ from monero_health import (
 def test_daemon_status_ok(mock_monero_rpc, caplog):
     mock_monero_rpc.return_value.hard_fork_info.return_value = {
         "status": DAEMON_STATUS_OK,
-        "version": "12",
+        "version": 12,
     }
     
     response = daemon_status_check()
 
     assert response["status"] == DAEMON_STATUS_OK
-    assert response["version"] == "12"
+    assert response["version"] == 12
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -38,28 +38,28 @@ def test_daemon_status_ok(mock_monero_rpc, caplog):
 @mock.patch("monero_health.AuthServiceProxy")
 def test_daemon_status_not_ok(mock_monero_rpc, caplog):
     mock_monero_rpc.return_value.hard_fork_info.return_value = {
-        "status": "ERROR",
-        "version": "12",
+        "status": DAEMON_STATUS_ERROR,
+        "version": 12,
     }
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
     
     response = daemon_status_check()
 
     assert response["status"] == DAEMON_STATUS_ERROR
-    assert response["version"] == "12"
+    assert response["version"] == 12
 
     assert "error" in response
     assert "error" in response["error"]
     assert "message" in response["error"]
-    assert response["error"]["error"] == "Daemon status is 'ERROR'.", "Wrong error."
-    assert response["error"]["message"] == "Daemon status is 'ERROR'. Daemon: '127.0.0.1:18081'.", "Wrong error."
+    assert response["error"]["error"] == f"Daemon status is '{DAEMON_STATUS_ERROR}'.", "Wrong error."
+    assert response["error"]["message"] == f"Daemon status is '{DAEMON_STATUS_ERROR}'. Daemon: '127.0.0.1:18081'.", "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "ERROR", "Wrong log message."
         json_message = json.loads(record.message)
         assert "message" in json_message, "Wrong log message."
-        assert json_message["message"] == "Daemon status is 'ERROR'. Daemon: '127.0.0.1:18081'.", "Wrong log message."
+        assert json_message["message"] == f"Daemon status is '{DAEMON_STATUS_ERROR}'. Daemon: '127.0.0.1:18081'.", "Wrong log message."
     caplog.clear()
 
 @mock.patch("monero_health.AuthServiceProxy")
