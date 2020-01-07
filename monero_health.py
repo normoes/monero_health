@@ -33,6 +33,7 @@ OFFSET_UNIT = os.environ.get("OFFSET_UNIT", OFFSET_UNIT_DEFAULT)
 
 DAEMON_STATUS_OK = "OK"
 DAEMON_STATUS_ERROR = "ERROR"
+DAEMON_STATUS_UNKNOWN = "UNKNOWN"
 
 
 def is_timestamp_within_offset(timestamp=None, now=None, offset:int=OFFSET, offset_unit=OFFSET_UNIT_DEFAULT) -> bool:
@@ -67,7 +68,7 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
     error = None
     response = None
     block_recent = False
-    status = DAEMON_STATUS_ERROR
+    status = DAEMON_STATUS_UNKNOWN
     last_block_timestamp = -1
     timestamp_obj = None
     last_block_hash = "---"
@@ -95,8 +96,13 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
 
     response = {"hash": last_block_hash, "block_timestamp": timestamp_obj.isoformat() if timestamp_obj else "---", "check_timestamp": check_timestamp.isoformat(), "status": status, "block_recent": block_recent, "block_recent_offset": offset, "block_recent_offset_unit": offset_unit}
 
-    if status == DAEMON_STATUS_ERROR or error:
-        data = {"message": f"Last block's timestamp is '{offset} [{offset_unit}]' old. Daemon: '{url}:{port}'."}
+    if status in (DAEMON_STATUS_ERROR, DAEMON_STATUS_UNKNOWN) or error:
+        if status == DAEMON_STATUS_ERROR:
+            message = f"Last block's timestamp is '{offset} [{offset_unit}]' old."
+        else:
+            message = f"Cannot determine daemon status."
+        data = {"message": f"{message} Daemon: '{url}:{port}'."}
+
         if not error:
             error = {"error": f"Last block's timestamp is '{offset} [{offset_unit}]' old."}
         data.update(error)
@@ -114,7 +120,7 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
 
     error = None
     response = None
-    status = DAEMON_STATUS_ERROR
+    status = DAEMON_STATUS_UNKNOWN
     version = -1
     try:
         if not conn:
@@ -136,10 +142,15 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
 
     response = {"status": status, "version": version}
 
-    if status == DAEMON_STATUS_ERROR or error:
-        data = {"message": f"Dameon status is '{status}'. Daemon: '{url}:{port}'."}
+    if status in (DAEMON_STATUS_ERROR, DAEMON_STATUS_UNKNOWN) or error:
+        if status == DAEMON_STATUS_ERROR:
+            message = f"Daemon status is '{status}'."
+        else:
+            message = f"Cannot determine daemon status."
+        data = {"message": f"{message} Daemon: '{url}:{port}'."}
+
         if not error:
-            error = {"error": f"Dameon status is '{status}'."}
+            error = {"error": f"Daemon status is '{status}'."}
         data.update(error)
         response.update({"error": data})
         logger.error(json.dumps(data))

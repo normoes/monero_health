@@ -11,7 +11,7 @@ There are two health checks at the moment:
 ## Configuration
 
 ### Monero daemon connection
-The connection to the Monero dameon can be configured using environment variables (also see `docker-compose-template.yml`):
+The connection to the Monero daemon can be configured using environment variables (also see `docker-compose-template.yml`):
 
 | environment variable | default value |
 |----------------------|---------------|
@@ -44,7 +44,7 @@ However, it is possible to directly run it as a script. it will then output the 
     # Last block age.
     INFO:DaemonHealth:Checking 'node.xmr.to:18081'.
     {'hash': 'b0f683278980ac65adfa6600c040d38f29f2299912c6c580d04f2f6704bf11d3', 'block_timestamp': '2019-12-19T15:02:16', 'check_timestamp': '2019-12-19T15:08:29.901177', 'block_recent': True, 'block_recent_offset': 12, 'block_recent_offset_unit': 'minutes'}
-    # Monero dameon status.
+    # Monero daemon status.
     INFO:DaemonHealth:Checking 'node.xmr.to:18081'.
     {'status': 'OK', 'version': 12}
 ```
