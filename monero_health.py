@@ -31,6 +31,10 @@ PASSWD = os.environ.get("MONEROD_RPC_PASSWORD", PASSWD_DEFAULT)
 OFFSET = os.environ.get("OFFSET", OFFSET_DEFAULT)
 OFFSET_UNIT = os.environ.get("OFFSET_UNIT", OFFSET_UNIT_DEFAULT)
 
+HEALTH_KEY = "health"
+LAST_BLOCK_KEY = "last_block"
+DAEMON_KEY = "monerod"
+
 DAEMON_STATUS_OK = "OK"
 DAEMON_STATUS_ERROR = "ERROR"
 DAEMON_STATUS_UNKNOWN = "UNKNOWN"
@@ -115,7 +119,7 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
 def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD):
     """Check daemon status.
 
-    Uses Monero daemon RPC 'get_info'.
+    Uses Monero daemon RPC 'hard_fork_info'.
     """
 
     error = None
@@ -156,6 +160,59 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
         logger.error(json.dumps(data))
 
     return response
+
+
+def daemon_combined_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD):
+    """Check combined daemon status.
+
+    Gets last block status from offset to determine an 'old'/'outdated' last block. 
+    Gets Monero daemon status from Monero daemon RPC 'hard_fork_info'.
+    """
+
+    response = {}
+
+    last_block_status = DAEMON_STATUS_UNKNOWN
+    daemon_status = DAEMON_STATUS_UNKNOWN
+
+    result = daemon_last_block_check(url=url, port=port, user=user, passwd=passwd)
+    if result:
+        print(result)
+        last_block_status = result.pop("status", last_block_status)
+        data = {LAST_BLOCK_KEY: result}
+        data[LAST_BLOCK_KEY].update({"status": last_block_status})
+        response.update(data)
+
+    result = daemon_status_check(url=url, port=port, user=user, passwd=passwd)
+    if result:
+        print(result)
+        daemon_status = result.pop("status", daemon_status)
+        data = {DAEMON_KEY: result}
+        data[DAEMON_KEY].update({"status": daemon_status})
+        response.update(data)
+
+    stati_to_consider = (last_block_status, daemon_status)
+    print(stati_to_consider)
+
+    status = None
+    status = DAEMON_STATUS_ERROR if any([status == DAEMON_STATUS_ERROR for status in stati_to_consider]) else None
+    print(status)
+    if not status:
+        status = DAEMON_STATUS_UNKNOWN if any([status == DAEMON_STATUS_UNKNOWN for status in stati_to_consider]) else None
+    print(status)
+    if not status:
+        status = DAEMON_STATUS_OK if all([status == DAEMON_STATUS_OK for status in stati_to_consider]) else DAEMON_STATUS_UNKOWN
+    print(status)
+
+    data = {"status": status}
+    print(data)
+    response.update(data)
+
+    message = f"Combined daemon status is '{status}'."
+    data = {"message": f"{message} Daemon: '{url}:{port}'."}
+    logger.info(json.dumps(data))
+
+    return response
+
 
 
 def main():
