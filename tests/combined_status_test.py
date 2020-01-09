@@ -31,24 +31,31 @@ def test_combined_status_ok(mock_last_block, mock_daemon, caplog):
         "check_timestamp": "2020-01-07T12:29:27",
         "hash": "3321dcedc99ff78c56e06d5adcb79c25e587df76a35f13771f20d6c9551cf160",
         "status": DAEMON_STATUS_OK,
+        "host": "127.0.0.1:18081",
     }
     mock_last_block.return_value = last_block_result
     daemon_result = {
         "status": DAEMON_STATUS_OK,
-        "version": 12
+        "version": 12,
+        "host": "127.0.0.1:18081",
     }
     mock_daemon.return_value = daemon_result
     
     response = daemon_combined_status_check()
-    print(f"response '{response}'")
+
     assert response["status"] == DAEMON_STATUS_OK
+    assert response["host"] == "127.0.0.1:18081"
+
     assert LAST_BLOCK_KEY in response
+    assert not "host" in response[LAST_BLOCK_KEY]
     assert response[LAST_BLOCK_KEY]["status"] == DAEMON_STATUS_OK
     assert response[LAST_BLOCK_KEY]["block_recent"] == True
     assert response[LAST_BLOCK_KEY]["block_recent_offset"] == 12
     assert response[LAST_BLOCK_KEY]["block_recent_offset_unit"] == "minutes"
+    assert response[LAST_BLOCK_KEY]["block_timestamp"] == "2020-01-07T12:22:31"
     assert response[LAST_BLOCK_KEY]["hash"] == "3321dcedc99ff78c56e06d5adcb79c25e587df76a35f13771f20d6c9551cf160"
     assert DAEMON_KEY in response
+    assert not "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_OK
     assert response[DAEMON_KEY]["version"] == 12
 
@@ -57,7 +64,7 @@ def test_combined_status_ok(mock_last_block, mock_daemon, caplog):
         assert record.levelname == "INFO", "Wrong log message."
         json_message = json.loads(record.message)
         assert "message" in json_message, "Wrong log message."
-        assert json_message["message"] == f"Combined daemon status is '{DAEMON_STATUS_OK}'. Daemon: '127.0.0.1:18081'."
+        assert json_message["message"] == f"Combined status is '{DAEMON_STATUS_OK}'."
     caplog.clear()
 
 @mock.patch("monero_health.AuthServiceProxy")
@@ -80,7 +87,8 @@ def test_combined_status_old_last_block(mock_daemon, mock_time_range, mock_moner
 
     daemon_result = {
         "status": DAEMON_STATUS_OK,
-        "version": 12
+        "version": 12,
+        "host": "127.0.0.1:18081",
     }
     mock_daemon.return_value = daemon_result
     
@@ -89,28 +97,33 @@ def test_combined_status_old_last_block(mock_daemon, mock_time_range, mock_moner
     response = daemon_combined_status_check()
 
     assert response["status"] == DAEMON_STATUS_ERROR
+    assert response["host"] == "127.0.0.1:18081"
+
     assert LAST_BLOCK_KEY in response
+    assert not "host" in response[LAST_BLOCK_KEY]
     assert response[LAST_BLOCK_KEY]["status"] == DAEMON_STATUS_ERROR
     assert response[LAST_BLOCK_KEY]["block_recent"] == False
     assert response[LAST_BLOCK_KEY]["block_recent_offset"] == 12
     assert response[LAST_BLOCK_KEY]["block_recent_offset_unit"] == "minutes"
+    assert response[LAST_BLOCK_KEY]["block_timestamp"] == "2019-12-20T07:55:33"
     assert response[LAST_BLOCK_KEY]["hash"] == "3f82c93e6f7726a54724d0b8b1026bec878af449bc2f97e9a916c6af72a6367a"
     assert DAEMON_KEY in response
+    assert not "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_OK
     assert response[DAEMON_KEY]["version"] == 12
 
     assert "error" in response[LAST_BLOCK_KEY]
     assert "error" in response[LAST_BLOCK_KEY]["error"]
     assert "message" in response[LAST_BLOCK_KEY]["error"]
-    assert response[LAST_BLOCK_KEY]["error"]["error"] == "Last block's timestamp is '12 [minutes]' old.", "Wrong error."
-    assert response[LAST_BLOCK_KEY]["error"]["message"] == "Last block's timestamp is '12 [minutes]' old. Daemon: '127.0.0.1:18081'.", "Wrong error."
+    assert response[LAST_BLOCK_KEY]["error"]["error"] == "Last block's timestamp is older than '12 [minutes]'.", "Wrong error."
+    assert response[LAST_BLOCK_KEY]["error"]["message"] == "Last block's timestamp is older than '12 [minutes]'.", "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "ERROR", "Wrong log message."
         json_message = json.loads(record.message)
         assert "message" in json_message, "Wrong log message."
-        assert json_message["message"] == "Last block's timestamp is '12 [minutes]' old. Daemon: '127.0.0.1:18081'.", "Wrong log message."
+        assert json_message["message"] == "Last block's timestamp is older than '12 [minutes]'.", "Wrong log message."
     caplog.clear()
 
 @mock.patch("monero_health.AuthServiceProxy")
@@ -130,12 +143,14 @@ def test_combined_status_daemon_status_error(mock_last_block, mock_monero_rpc, c
         "check_timestamp": "2020-01-07T12:29:27",
         "hash": "3321dcedc99ff78c56e06d5adcb79c25e587df76a35f13771f20d6c9551cf160",
         "status": DAEMON_STATUS_OK,
+        "host": "127.0.0.1:18081",
     }
     mock_last_block.return_value = last_block_result
 
     mock_monero_rpc.return_value.hard_fork_info.return_value = {
         "status": DAEMON_STATUS_ERROR,
         "version": 12,
+        "host": "127.0.0.1:18081",
     }
     
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
@@ -143,28 +158,33 @@ def test_combined_status_daemon_status_error(mock_last_block, mock_monero_rpc, c
     response = daemon_combined_status_check()
 
     assert response["status"] == DAEMON_STATUS_ERROR
+    assert response["host"] == "127.0.0.1:18081"
+
     assert LAST_BLOCK_KEY in response
+    assert not "host" in response[LAST_BLOCK_KEY]
     assert response[LAST_BLOCK_KEY]["status"] == DAEMON_STATUS_OK
     assert response[LAST_BLOCK_KEY]["block_recent"] == True
     assert response[LAST_BLOCK_KEY]["block_recent_offset"] == 12
     assert response[LAST_BLOCK_KEY]["block_recent_offset_unit"] == "minutes"
+    assert response[LAST_BLOCK_KEY]["block_timestamp"] == "2020-01-07T12:22:31"
     assert response[LAST_BLOCK_KEY]["hash"] == "3321dcedc99ff78c56e06d5adcb79c25e587df76a35f13771f20d6c9551cf160"
     assert DAEMON_KEY in response
+    assert not "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_ERROR
     assert response[DAEMON_KEY]["version"] == 12
 
     assert "error" in response[DAEMON_KEY]
     assert "error" in response[DAEMON_KEY]["error"]
     assert "message" in response[DAEMON_KEY]["error"]
-    assert response[DAEMON_KEY]["error"]["error"] == f"Daemon status is '{DAEMON_STATUS_ERROR}'.", "Wrong error."
-    assert response[DAEMON_KEY]["error"]["message"] == f"Daemon status is '{DAEMON_STATUS_ERROR}'. Daemon: '127.0.0.1:18081'.", "Wrong error."
+    assert response[DAEMON_KEY]["error"]["error"] == f"Status is '{DAEMON_STATUS_ERROR}'.", "Wrong error."
+    assert response[DAEMON_KEY]["error"]["message"] == f"Status is '{DAEMON_STATUS_ERROR}'.", "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "ERROR", "Wrong log message."
         json_message = json.loads(record.message)
         assert "message" in json_message, "Wrong log message."
-        assert json_message["message"] == f"Daemon status is '{DAEMON_STATUS_ERROR}'. Daemon: '127.0.0.1:18081'.", "Wrong log message."
+        assert json_message["message"] == f"Status is '{DAEMON_STATUS_ERROR}'.", "Wrong log message."
     caplog.clear()
 
 @mock.patch("monero_health.AuthServiceProxy")
@@ -182,7 +202,8 @@ def test_combined_status_unknown_last_block_status(mock_daemon, mock_time_range,
 
     daemon_result = {
         "status": DAEMON_STATUS_OK,
-        "version": 12
+        "version": 12,
+        "host": "127.0.0.1:18081",
     }
     mock_daemon.return_value = daemon_result
     
@@ -191,13 +212,18 @@ def test_combined_status_unknown_last_block_status(mock_daemon, mock_time_range,
     response = daemon_combined_status_check()
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
+    assert response["host"] == "127.0.0.1:18081"
+
     assert LAST_BLOCK_KEY in response
+    assert not "host" in response[LAST_BLOCK_KEY]
     assert response[LAST_BLOCK_KEY]["status"] == DAEMON_STATUS_UNKNOWN
     assert response[LAST_BLOCK_KEY]["block_recent"] == False
     assert response[LAST_BLOCK_KEY]["block_recent_offset"] == 12
     assert response[LAST_BLOCK_KEY]["block_recent_offset_unit"] == "minutes"
+    assert response[LAST_BLOCK_KEY]["block_timestamp"] == "---"
     assert response[LAST_BLOCK_KEY]["hash"] == "---"
     assert DAEMON_KEY in response
+    assert not "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_OK
     assert response[DAEMON_KEY]["version"] == 12
 
@@ -205,14 +231,14 @@ def test_combined_status_unknown_last_block_status(mock_daemon, mock_time_range,
     assert "error" in response[LAST_BLOCK_KEY]["error"]
     assert "message" in response[LAST_BLOCK_KEY]["error"]
     assert response[LAST_BLOCK_KEY]["error"]["error"] == "11: Some Monero RPC error.", "Wrong error."
-    assert response[LAST_BLOCK_KEY]["error"]["message"] == "Cannot determine daemon status. Daemon: '127.0.0.1:18081'.", "Wrong error."
+    assert response[LAST_BLOCK_KEY]["error"]["message"] == "Cannot determine status.", "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "ERROR", "Wrong log message."
         json_message = json.loads(record.message)
         assert "message" in json_message, "Wrong log message."
-        assert json_message["message"] == "Cannot determine daemon status. Daemon: '127.0.0.1:18081'.", "Wrong log message."
+        assert json_message["message"] == "Cannot determine status.", "Wrong log message."
     caplog.clear()
 
 @mock.patch("monero_health.AuthServiceProxy")
@@ -232,6 +258,7 @@ def test_combined_status_unknown_daemon_status(mock_last_block, mock_monero_rpc,
         "check_timestamp": "2020-01-07T12:29:27",
         "hash": "3321dcedc99ff78c56e06d5adcb79c25e587df76a35f13771f20d6c9551cf160",
         "status": DAEMON_STATUS_OK,
+        "host": "127.0.0.1:18081",
     }
     mock_last_block.return_value = last_block_result
     mock_monero_rpc.side_effect = JSONRPCException(rpc_error={"message": "Some Monero RPC error.", "code": 11})
@@ -241,13 +268,18 @@ def test_combined_status_unknown_daemon_status(mock_last_block, mock_monero_rpc,
     response = daemon_combined_status_check()
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
+    assert response["host"] == "127.0.0.1:18081"
+
     assert LAST_BLOCK_KEY in response
+    assert not "host" in response[LAST_BLOCK_KEY]
     assert response[LAST_BLOCK_KEY]["status"] == DAEMON_STATUS_OK
     assert response[LAST_BLOCK_KEY]["block_recent"] == True
     assert response[LAST_BLOCK_KEY]["block_recent_offset"] == 12
     assert response[LAST_BLOCK_KEY]["block_recent_offset_unit"] == "minutes"
+    assert response[LAST_BLOCK_KEY]["block_timestamp"] == "2020-01-07T12:22:31"
     assert response[LAST_BLOCK_KEY]["hash"] == "3321dcedc99ff78c56e06d5adcb79c25e587df76a35f13771f20d6c9551cf160"
     assert DAEMON_KEY in response
+    assert not "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_UNKNOWN
     assert response[DAEMON_KEY]["version"] == -1
 
@@ -255,12 +287,12 @@ def test_combined_status_unknown_daemon_status(mock_last_block, mock_monero_rpc,
     assert "error" in response[DAEMON_KEY]["error"]
     assert "message" in response[DAEMON_KEY]["error"]
     assert response[DAEMON_KEY]["error"]["error"] == "11: Some Monero RPC error.", "Wrong error."
-    assert response[DAEMON_KEY]["error"]["message"] == "Cannot determine daemon status. Daemon: '127.0.0.1:18081'.", "Wrong error."
+    assert response[DAEMON_KEY]["error"]["message"] == "Cannot determine status.", "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "ERROR", "Wrong log message."
         json_message = json.loads(record.message)
         assert "message" in json_message, "Wrong log message."
-        assert json_message["message"] == "Cannot determine daemon status. Daemon: '127.0.0.1:18081'.", "Wrong log message."
+        assert json_message["message"] == "Cannot determine status.", "Wrong log message."
     caplog.clear()
