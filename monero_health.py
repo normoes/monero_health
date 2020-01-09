@@ -39,6 +39,19 @@ DAEMON_STATUS_OK = "OK"
 DAEMON_STATUS_ERROR = "ERROR"
 DAEMON_STATUS_UNKNOWN = "UNKNOWN"
 
+DAEMON_STATUS_WEIGHTS = {
+    -1: DAEMON_STATUS_UNKNOWN,
+    0: DAEMON_STATUS_OK,
+    1: DAEMON_STATUS_UNKNOWN,
+    2: DAEMON_STATUS_ERROR,
+}
+
+DAEMON_STATUS_WEIGHTS_ = {
+    DAEMON_STATUS_OK: 0,
+    DAEMON_STATUS_UNKNOWN: 1,
+    DAEMON_STATUS_ERROR: 2,
+}
+
 
 def is_timestamp_within_offset(timestamp=None, now=None, offset:int=OFFSET, offset_unit=OFFSET_UNIT_DEFAULT) -> bool:
     if not timestamp or not now:
@@ -96,19 +109,23 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
 
     if response is None:
         if not error:
-            error = {"error": f"No response from daemon '{url}:{port}'."}
+            error = {"error": f"No response."}
 
     response = {"hash": last_block_hash, "block_timestamp": timestamp_obj.isoformat() if timestamp_obj else "---", "check_timestamp": check_timestamp.isoformat(), "status": status, "block_recent": block_recent, "block_recent_offset": offset, "block_recent_offset_unit": offset_unit}
+    response.update({"host": f"{url}:{port}"})
 
     if status in (DAEMON_STATUS_ERROR, DAEMON_STATUS_UNKNOWN) or error:
+        data = {}
         if status == DAEMON_STATUS_ERROR:
-            message = f"Last block's timestamp is '{offset} [{offset_unit}]' old."
+            message = f"Last block's timestamp is older than '{offset} [{offset_unit}]'."
+            data.update({"block_timestamp": response["block_timestamp"]})
+            data.update({"hash": response["hash"]})
         else:
-            message = f"Cannot determine daemon status."
-        data = {"message": f"{message} Daemon: '{url}:{port}'."}
+            message = f"Cannot determine status."
+        data.update({"message": message})
 
         if not error:
-            error = {"error": f"Last block's timestamp is '{offset} [{offset_unit}]' old."}
+            error = {"error": message}
         data.update(error)
         response.update({"error": data})
         logger.error(json.dumps(data))
@@ -142,19 +159,20 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
 
     if response is None:
         if not error:
-            error = {"error": f"No response from daemon '{url}:{port}'."}
+            error = {"error": f"No response."}
 
     response = {"status": status, "version": version}
+    response.update({"host": f"{url}:{port}"})
 
     if status in (DAEMON_STATUS_ERROR, DAEMON_STATUS_UNKNOWN) or error:
         if status == DAEMON_STATUS_ERROR:
-            message = f"Daemon status is '{status}'."
+            message = f"Status is '{status}'."
         else:
-            message = f"Cannot determine daemon status."
-        data = {"message": f"{message} Daemon: '{url}:{port}'."}
+            message = f"Cannot determine status."
+        data = {"message": message}
 
         if not error:
-            error = {"error": f"Daemon status is '{status}'."}
+            error = {"error": message}
         data.update(error)
         response.update({"error": data})
         logger.error(json.dumps(data))
@@ -172,36 +190,46 @@ def daemon_combined_status_check(conn=None, url=URL, port=PORT, user=USER, passw
     response = {}
 
     last_block_status = DAEMON_STATUS_UNKNOWN
+    last_block_host = ""
     daemon_status = DAEMON_STATUS_UNKNOWN
+    daemon_host = ""
 
     result = daemon_last_block_check(url=url, port=port, user=user, passwd=passwd)
     if result:
-        last_block_status = result.pop("status", last_block_status)
+        last_block_status = result.get("status", last_block_status)
+        last_block_host = result.pop("host", last_block_host)
         data = {LAST_BLOCK_KEY: result}
-        data[LAST_BLOCK_KEY].update({"status": last_block_status})
         response.update(data)
 
     result = daemon_status_check(url=url, port=port, user=user, passwd=passwd)
     if result:
-        daemon_status = result.pop("status", daemon_status)
+        daemon_status = result.get("status", daemon_status)
+        daemon_host = result.pop("host", daemon_host)
         data = {DAEMON_KEY: result}
-        data[DAEMON_KEY].update({"status": daemon_status})
         response.update(data)
 
     stati_to_consider = (last_block_status, daemon_status)
 
     status = None
-    status = DAEMON_STATUS_ERROR if any([status == DAEMON_STATUS_ERROR for status in stati_to_consider]) else None
-    if not status:
-        status = DAEMON_STATUS_UNKNOWN if any([status == DAEMON_STATUS_UNKNOWN for status in stati_to_consider]) else None
-    if not status:
-        status = DAEMON_STATUS_OK if all([status == DAEMON_STATUS_OK for status in stati_to_consider]) else DAEMON_STATUS_UNKOWN
+    max_weight = -1
+    for status_ in stati_to_consider:
+        max_weight = max(max_weight, DAEMON_STATUS_WEIGHTS_.get(status_, -1))
+   
+    status = DAEMON_STATUS_WEIGHTS[max_weight]
 
-    data = {"status": status}
+
+    # status = DAEMON_STATUS_ERROR if any([status_ == DAEMON_STATUS_ERROR for status_ in stati_to_consider]) else None
+    # if not status:
+    #     status = DAEMON_STATUS_UNKNOWN if any([status_ == DAEMON_STATUS_UNKNOWN for status_ in stati_to_consider]) else None
+    # if not status:
+    #     status = DAEMON_STATUS_OK if all([status_ == DAEMON_STATUS_OK for status_ in stati_to_consider]) else DAEMON_STATUS_UNKOWN
+
+    # 'last_block_host' should always be same as 'daemon_host'.
+    data = {"status": status, "host": daemon_host}
     response.update(data)
 
-    message = f"Combined daemon status is '{status}'."
-    data = {"message": f"{message} Daemon: '{url}:{port}'."}
+    message = f"Combined status is '{status}'."
+    data = {"message": message}
     logger.info(json.dumps(data))
 
     return response
