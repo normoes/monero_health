@@ -32,6 +32,7 @@ def test_combined_status_ok(mock_last_block, mock_daemon, caplog):
         "hash": "3321dcedc99ff78c56e06d5adcb79c25e587df76a35f13771f20d6c9551cf160",
         "status": DAEMON_STATUS_OK,
         "host": "127.0.0.1:18081",
+        "block_age": "0:00:19",
     }
     mock_last_block.return_value = last_block_result
     daemon_result = {
@@ -54,6 +55,7 @@ def test_combined_status_ok(mock_last_block, mock_daemon, caplog):
     assert response[LAST_BLOCK_KEY]["block_recent_offset_unit"] == "minutes"
     assert response[LAST_BLOCK_KEY]["block_timestamp"] == "2020-01-07T12:22:31"
     assert response[LAST_BLOCK_KEY]["hash"] == "3321dcedc99ff78c56e06d5adcb79c25e587df76a35f13771f20d6c9551cf160"
+    assert "block_age" in response[LAST_BLOCK_KEY]
     assert DAEMON_KEY in response
     assert not "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_OK
@@ -144,6 +146,7 @@ def test_combined_status_daemon_status_error(mock_last_block, mock_monero_rpc, c
         "hash": "3321dcedc99ff78c56e06d5adcb79c25e587df76a35f13771f20d6c9551cf160",
         "status": DAEMON_STATUS_OK,
         "host": "127.0.0.1:18081",
+        "block_age": "0:00:19",
     }
     mock_last_block.return_value = last_block_result
 
@@ -168,6 +171,7 @@ def test_combined_status_daemon_status_error(mock_last_block, mock_monero_rpc, c
     assert response[LAST_BLOCK_KEY]["block_recent_offset_unit"] == "minutes"
     assert response[LAST_BLOCK_KEY]["block_timestamp"] == "2020-01-07T12:22:31"
     assert response[LAST_BLOCK_KEY]["hash"] == "3321dcedc99ff78c56e06d5adcb79c25e587df76a35f13771f20d6c9551cf160"
+    assert "block_age" in response[LAST_BLOCK_KEY]
     assert DAEMON_KEY in response
     assert not "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_ERROR
@@ -222,6 +226,7 @@ def test_combined_status_unknown_last_block_status(mock_daemon, mock_time_range,
     assert response[LAST_BLOCK_KEY]["block_recent_offset_unit"] == "minutes"
     assert response[LAST_BLOCK_KEY]["block_timestamp"] == "---"
     assert response[LAST_BLOCK_KEY]["hash"] == "---"
+    assert response[LAST_BLOCK_KEY]["block_age"] == -1
     assert DAEMON_KEY in response
     assert not "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_OK

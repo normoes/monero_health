@@ -88,6 +88,7 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
     status = DAEMON_STATUS_UNKNOWN
     last_block_timestamp = -1
     timestamp_obj = None
+    block_age = None
     last_block_hash = "---"
     check_timestamp = datetime.datetime.utcnow().replace(microsecond=0)
     try:
@@ -112,7 +113,7 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
         if not error:
             error = {"error": f"No response."}
 
-    response = {"hash": last_block_hash, "block_timestamp": timestamp_obj.isoformat() if timestamp_obj else "---", "check_timestamp": check_timestamp.isoformat(), "status": status, "block_recent": block_recent, "block_recent_offset": offset, "block_recent_offset_unit": offset_unit}
+    response = {"hash": last_block_hash, "block_age": block_age if block_age else -1, "block_timestamp": timestamp_obj.isoformat() if timestamp_obj else "---", "check_timestamp": check_timestamp.isoformat(), "status": status, "block_recent": block_recent, "block_recent_offset": offset, "block_recent_offset_unit": offset_unit}
     response.update({"host": f"{url}:{port}"})
 
     if status in (DAEMON_STATUS_ERROR, DAEMON_STATUS_UNKNOWN) or error:

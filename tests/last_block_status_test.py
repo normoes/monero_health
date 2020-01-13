@@ -37,6 +37,7 @@ def test_last_block_recent(mock_time_range, mock_monero_rpc, caplog):
     assert response["block_timestamp"] == "2019-12-20T07:55:33"
     assert response["hash"] == "3f82c93e6f7726a54724d0b8b1026bec878af449bc2f97e9a916c6af72a6367a"
     assert response["host"] == "127.0.0.1:18081"
+    assert "block_age" in response
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -65,6 +66,7 @@ def test_last_block_not_recent_timestamp_old(mock_time_range, mock_monero_rpc, c
     assert response["block_timestamp"] == "2019-12-20T07:55:33"
     assert response["hash"] == "3f82c93e6f7726a54724d0b8b1026bec878af449bc2f97e9a916c6af72a6367a"
     assert response["host"] == "127.0.0.1:18081"
+    assert "block_age" in response
 
     assert "error" in response
     assert "error" in response["error"]
@@ -100,6 +102,7 @@ def test_last_block_not_recent_rpc_error(mock_time_range, mock_monero_rpc, caplo
     assert response["block_timestamp"] == "---"
     assert response["hash"] == "---"
     assert response["host"] == "127.0.0.1:18081"
+    assert response["block_age"] == -1
 
     assert "error" in response
     assert "error" in response["error"]
@@ -136,6 +139,7 @@ def test_last_block_not_recent_read_timeout(mock_time_range, mock_monero_rpc, ca
     assert response["block_timestamp"] == "---"
     assert response["hash"] == "---"
     assert response["host"] == "127.0.0.1:18081"
+    assert response["block_age"] == -1
 
     assert "error" in response
     assert "error" in response["error"]
@@ -172,6 +176,7 @@ def test_last_block_not_recent_connection_error(mock_time_range, mock_monero_rpc
     assert response["block_timestamp"] == "---"
     assert response["hash"] == "---"
     assert response["host"] == "127.0.0.1:18081"
+    assert response["block_age"] == -1
 
     assert "error" in response
     assert "error" in response["error"]
@@ -208,6 +213,7 @@ def test_last_block_not_recent_timeout(mock_time_range, mock_monero_rpc, caplog)
     assert response["block_timestamp"] == "---"
     assert response["hash"] == "---"
     assert response["host"] == "127.0.0.1:18081"
+    assert response["block_age"] == -1
 
     assert "error" in response
     assert "error" in response["error"]
