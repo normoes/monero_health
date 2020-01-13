@@ -115,7 +115,7 @@ def test_combined_status_old_last_block(mock_daemon, mock_time_range, mock_moner
     assert "error" in response[LAST_BLOCK_KEY]
     assert "error" in response[LAST_BLOCK_KEY]["error"]
     assert "message" in response[LAST_BLOCK_KEY]["error"]
-    assert response[LAST_BLOCK_KEY]["error"]["error"] == "Last block's timestamp is older than '12 [minutes]'.", "Wrong error."
+    assert response[LAST_BLOCK_KEY]["error"]["error"].startswith("Last block's age is '"), "Wrong error."
     assert response[LAST_BLOCK_KEY]["error"]["message"] == "Last block's timestamp is older than '12 [minutes]'.", "Wrong error."
 
     assert len(caplog.records) == 1
