@@ -69,7 +69,7 @@ def test_last_block_not_recent_timestamp_old(mock_time_range, mock_monero_rpc, c
     assert "error" in response
     assert "error" in response["error"]
     assert "message" in response["error"]
-    assert response["error"]["error"] == "Last block's timestamp is older than '12 [minutes]'.", "Wrong error."
+    assert response["error"]["error"].startswith("Last block's age is '"), "Wrong error."
     assert response["error"]["message"] == "Last block's timestamp is older than '12 [minutes]'.", "Wrong error."
 
     assert len(caplog.records) == 1

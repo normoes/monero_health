@@ -102,6 +102,7 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
         last_block_hash = last_block_header["hash"]
         block_recent, offset, offset_unit = is_timestamp_within_offset(timestamp=timestamp_obj, now=check_timestamp, offset=offset, offset_unit=offset_unit)
         status = DAEMON_STATUS_OK if block_recent else DAEMON_STATUS_ERROR
+        block_age = str(check_timestamp - timestamp_obj)
 
         response = {}
     except (JSONRPCException, RequestsConnectionError, ReadTimeout, Timeout) as e:
@@ -122,7 +123,7 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
         data = {"message": message}
 
         if not error:
-            error = {"error": message}
+            error = {"error": f"Last block's age is '{block_age}'."}
         data.update(error)
         response.update({"error": data})
         logger.error(json.dumps(data))
