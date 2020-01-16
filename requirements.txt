@@ -1,1 +1,1 @@
-python-monerorpc==0.5.8
+python-monerorpc==0.5.9

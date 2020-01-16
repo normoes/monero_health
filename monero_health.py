@@ -4,7 +4,7 @@ import os
 import sys
 import json
 
-from monerorpc.authproxy import AuthServiceProxy, JSONRPCException
+from monerorpc.authproxy import AuthServiceProxy, JSONRPCException, HTTP_TIMEOUT as MONERO_RPC_HTTP_TIMEOUT
 from requests.exceptions import (
     ConnectionError as RequestsConnectionError,
     ReadTimeout,
@@ -23,6 +23,7 @@ PASSWD_DEFAULT = ""
 OFFSET_DEFAULT = 12
 # Possible values: https://docs.python.org/2/library/datetime.html#timedelta-objects
 OFFSET_UNIT_DEFAULT = "minutes"
+HTTP_TIMEOUT_DEFAULT = MONERO_RPC_HTTP_TIMEOUT
 
 URL = os.environ.get("MONEROD_RPC_URL", URL_DEFAULT)
 PORT = os.environ.get("MONEROD_RPC_PORT", PORT_DEFAULT)
@@ -30,6 +31,7 @@ USER = os.environ.get("MONEROD_RPC_USER", USER_DEFAULT)
 PASSWD = os.environ.get("MONEROD_RPC_PASSWORD", PASSWD_DEFAULT)
 OFFSET = os.environ.get("OFFSET", OFFSET_DEFAULT)
 OFFSET_UNIT = os.environ.get("OFFSET_UNIT", OFFSET_UNIT_DEFAULT)
+HTTP_TIMEOUT = os.environ.get("HTTP_TIMEOUT", HTTP_TIMEOUT_DEFAULT)
 
 HEALTH_KEY = "health"
 LAST_BLOCK_KEY = "last_block"
@@ -51,6 +53,7 @@ DAEMON_STATUS_WEIGHTS_ = {
     DAEMON_STATUS_UNKNOWN: 1,
     DAEMON_STATUS_ERROR: 2,
 }
+
 
 
 def is_timestamp_within_offset(timestamp=None, now=None, offset:int=OFFSET, offset_unit=OFFSET_UNIT_DEFAULT) -> bool:
@@ -93,7 +96,7 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
     check_timestamp = datetime.datetime.utcnow().replace(microsecond=0)
     try:
         if not conn:
-            conn = AuthServiceProxy(f"http://{user}@{url}:{port}/json_rpc", password=f"{passwd}")
+            conn = AuthServiceProxy(f"http://{user}@{url}:{port}/json_rpc", password=f"{passwd}", timeout=HTTP_TIMEOUT)
 
         logger.info(f"Checking '{url}:{port}'.")
 
@@ -106,7 +109,7 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
         block_age = str(check_timestamp - timestamp_obj)
 
         response = {}
-    except (JSONRPCException, RequestsConnectionError, ReadTimeout, Timeout) as e:
+    except (ValueError, JSONRPCException, RequestsConnectionError, ReadTimeout, Timeout) as e:
         error = {"error": str(e)}
 
     if response is None:
@@ -144,7 +147,7 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
     version = -1
     try:
         if not conn:
-            conn = AuthServiceProxy(f"http://{user}@{url}:{port}/json_rpc", password=f"{passwd}")
+            conn = AuthServiceProxy(f"http://{user}@{url}:{port}/json_rpc", password=f"{passwd}", timeout=HTTP_TIMEOUT)
 
         logger.info(f"Checking '{url}:{port}'.")
 
@@ -153,7 +156,7 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
         version = hard_fork_info["version"]
 
         response = {}
-    except (JSONRPCException, RequestsConnectionError, ReadTimeout, Timeout) as e:
+    except (ValueError, JSONRPCException, RequestsConnectionError, ReadTimeout, Timeout) as e:
         error = {"error": str(e)}
 
     if response is None:
