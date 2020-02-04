@@ -23,7 +23,7 @@ setup(
         "Programming Language :: Python",
     ],
     packages=find_packages(exclude=["tests*"]),
-    install_requires=["python-monerorpc>=0.5.9"],
+    install_requires=["python-monerorpc>=0.5.10"],
     extras_require={"test": ["mock", "pytest"]},
     py_modules=["monero_health"],
 )

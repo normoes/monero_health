@@ -4,12 +4,12 @@ import os
 import sys
 import json
 
-from monerorpc.authproxy import AuthServiceProxy, JSONRPCException, HTTP_TIMEOUT as MONERO_RPC_HTTP_TIMEOUT
-from requests.exceptions import (
-    ConnectionError as RequestsConnectionError,
-    ReadTimeout,
-    Timeout,
+from monerorpc.authproxy import (
+    AuthServiceProxy,
+    JSONRPCException,
+    HTTP_TIMEOUT as MONERO_RPC_HTTP_TIMEOUT,
 )
+from requests.exceptions import RequestException
 
 logging.basicConfig()
 logger = logging.getLogger("DaemonHealth")
@@ -55,8 +55,9 @@ DAEMON_STATUS_WEIGHTS_ = {
 }
 
 
-
-def is_timestamp_within_offset(timestamp=None, now=None, offset:int=OFFSET, offset_unit=OFFSET_UNIT_DEFAULT) -> bool:
+def is_timestamp_within_offset(
+    timestamp=None, now=None, offset: int = OFFSET, offset_unit=OFFSET_UNIT_DEFAULT
+) -> bool:
     if not timestamp or not now:
         return None
 
@@ -70,16 +71,26 @@ def is_timestamp_within_offset(timestamp=None, now=None, offset:int=OFFSET, offs
         timedelta_ = {offset_unit: offset}
         delta = datetime.timedelta(**timedelta_)
     except (TypeError) as e:
-        logger.warning(f"Using default offset of '{OFFSET_DEFAULT} [{OFFSET_UNIT_DEFAULT}]'. Configured wrong offset '{offset} [{offset_unit}]'. Error: '{str(e)}'.")
+        logger.warning(
+            f"Using default offset of '{OFFSET_DEFAULT} [{OFFSET_UNIT_DEFAULT}]'. Configured wrong offset '{offset} [{offset_unit}]'. Error: '{str(e)}'."
+        )
         offset = OFFSET_DEFAULT
         offset_unit = OFFSET_UNIT_DEFAULT
         timedelta_ = {offset_unit: offset}
         delta = datetime.timedelta(**timedelta_)
-        
+
     return block_offset <= delta, offset, offset_unit
 
 
-def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD, offset=OFFSET, offset_unit=OFFSET_UNIT):
+def daemon_last_block_check(
+    conn=None,
+    url=URL,
+    port=PORT,
+    user=USER,
+    passwd=PASSWD,
+    offset=OFFSET,
+    offset_unit=OFFSET_UNIT,
+):
     """Check last block status.
 
     Uses an offset to determine an 'old'/'outdated' last block.
@@ -96,7 +107,11 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
     check_timestamp = datetime.datetime.utcnow().replace(microsecond=0)
     try:
         if not conn:
-            conn = AuthServiceProxy(f"http://{user}@{url}:{port}/json_rpc", password=f"{passwd}", timeout=HTTP_TIMEOUT)
+            conn = AuthServiceProxy(
+                f"http://{user}@{url}:{port}/json_rpc",
+                password=f"{passwd}",
+                timeout=HTTP_TIMEOUT,
+            )
 
         logger.info(f"Checking '{url}:{port}'.")
 
@@ -104,24 +119,40 @@ def daemon_last_block_check(conn=None, url=URL, port=PORT, user=USER, passwd=PAS
         last_block_timestamp = float(last_block_header["timestamp"])
         timestamp_obj = datetime.datetime.fromtimestamp(last_block_timestamp)
         last_block_hash = last_block_header["hash"]
-        block_recent, offset, offset_unit = is_timestamp_within_offset(timestamp=timestamp_obj, now=check_timestamp, offset=offset, offset_unit=offset_unit)
+        block_recent, offset, offset_unit = is_timestamp_within_offset(
+            timestamp=timestamp_obj,
+            now=check_timestamp,
+            offset=offset,
+            offset_unit=offset_unit,
+        )
         status = DAEMON_STATUS_OK if block_recent else DAEMON_STATUS_ERROR
         block_age = str(check_timestamp - timestamp_obj)
 
         response = {}
-    except (ValueError, JSONRPCException, RequestsConnectionError, ReadTimeout, Timeout) as e:
+    except (ValueError, JSONRPCException, RequestException) as e:
         error = {"error": str(e)}
 
     if response is None:
         if not error:
             error = {"error": f"No response."}
 
-    response = {"hash": last_block_hash, "block_age": block_age if block_age else -1, "block_timestamp": timestamp_obj.isoformat() if timestamp_obj else "---", "check_timestamp": check_timestamp.isoformat(), "status": status, "block_recent": block_recent, "block_recent_offset": offset, "block_recent_offset_unit": offset_unit}
+    response = {
+        "hash": last_block_hash,
+        "block_age": block_age if block_age else -1,
+        "block_timestamp": timestamp_obj.isoformat() if timestamp_obj else "---",
+        "check_timestamp": check_timestamp.isoformat(),
+        "status": status,
+        "block_recent": block_recent,
+        "block_recent_offset": offset,
+        "block_recent_offset_unit": offset_unit,
+    }
     response.update({"host": f"{url}:{port}"})
 
     if status in (DAEMON_STATUS_ERROR, DAEMON_STATUS_UNKNOWN) or error:
         if status == DAEMON_STATUS_ERROR:
-            message = f"Last block's timestamp is older than '{offset} [{offset_unit}]'."
+            message = (
+                f"Last block's timestamp is older than '{offset} [{offset_unit}]'."
+            )
         else:
             message = f"Cannot determine status."
         data = {"message": message}
@@ -147,7 +178,11 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
     version = -1
     try:
         if not conn:
-            conn = AuthServiceProxy(f"http://{user}@{url}:{port}/json_rpc", password=f"{passwd}", timeout=HTTP_TIMEOUT)
+            conn = AuthServiceProxy(
+                f"http://{user}@{url}:{port}/json_rpc",
+                password=f"{passwd}",
+                timeout=HTTP_TIMEOUT,
+            )
 
         logger.info(f"Checking '{url}:{port}'.")
 
@@ -156,7 +191,7 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
         version = hard_fork_info["version"]
 
         response = {}
-    except (ValueError, JSONRPCException, RequestsConnectionError, ReadTimeout, Timeout) as e:
+    except (ValueError, JSONRPCException, RequestException) as e:
         error = {"error": str(e)}
 
     if response is None:
@@ -182,10 +217,12 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
     return response
 
 
-def daemon_combined_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD):
+def daemon_combined_status_check(
+    conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD
+):
     """Check combined daemon status.
 
-    Gets last block status from offset to determine an 'old'/'outdated' last block. 
+    Gets last block status from offset to determine an 'old'/'outdated' last block.
     Gets Monero daemon status from Monero daemon RPC 'hard_fork_info'.
     """
 
@@ -216,15 +253,8 @@ def daemon_combined_status_check(conn=None, url=URL, port=PORT, user=USER, passw
     max_weight = -1
     for status_ in stati_to_consider:
         max_weight = max(max_weight, DAEMON_STATUS_WEIGHTS_.get(status_, -1))
-   
+
     status = DAEMON_STATUS_WEIGHTS[max_weight]
-
-
-    # status = DAEMON_STATUS_ERROR if any([status_ == DAEMON_STATUS_ERROR for status_ in stati_to_consider]) else None
-    # if not status:
-    #     status = DAEMON_STATUS_UNKNOWN if any([status_ == DAEMON_STATUS_UNKNOWN for status_ in stati_to_consider]) else None
-    # if not status:
-    #     status = DAEMON_STATUS_OK if all([status_ == DAEMON_STATUS_OK for status_ in stati_to_consider]) else DAEMON_STATUS_UNKOWN
 
     # 'last_block_host' should always be same as 'daemon_host'.
     data = {"status": status, "host": daemon_host}
@@ -237,9 +267,17 @@ def daemon_combined_status_check(conn=None, url=URL, port=PORT, user=USER, passw
     return response
 
 
-
 def main():
-    print(daemon_last_block_check(url=URL, port=PORT, user=USER, passwd=PASSWD, offset=OFFSET, offset_unit=OFFSET_UNIT))
+    print(
+        daemon_last_block_check(
+            url=URL,
+            port=PORT,
+            user=USER,
+            passwd=PASSWD,
+            offset=OFFSET,
+            offset_unit=OFFSET_UNIT,
+        )
+    )
     print(daemon_status_check(url=URL, port=PORT, user=USER, passwd=PASSWD))
 
 

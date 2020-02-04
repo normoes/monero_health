@@ -137,3 +137,14 @@ Example - No Monero daemon running at `127.0.0.1:18081`:
     "status": "UNKNOWN"
 }
 ```
+
+## Tests
+```
+# Create and activate a virtual environment.
+python -m venv venv
+. venv/bin/activate
+# Install the dependencies.
+pip install --upgrade -r requirements.txt
+# Run tests.
+pytest
+```
