@@ -382,7 +382,6 @@ def daemon_combined_status_check(
         data = {DAEMON_KEY: result}
         response.update(data)
 
-    print(f"--{daemon_status}")
     stati_to_consider = (last_block_status, daemon_status)
 
     status = None
