@@ -1,5 +1,4 @@
 import mock
-import pytest
 import logging
 import json
 
@@ -32,7 +31,7 @@ def test_last_block_recent(mock_time_range, mock_monero_rpc, caplog):
     response = daemon_last_block_check()
 
     assert response["status"] == DAEMON_STATUS_OK
-    assert response["block_recent"] == True
+    assert response["block_recent"]
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
     assert response["block_timestamp"] == "2019-12-20T07:55:33"
@@ -65,7 +64,7 @@ def test_last_block_not_recent_timestamp_old(mock_time_range, mock_monero_rpc, c
     response = daemon_last_block_check()
 
     assert response["status"] == DAEMON_STATUS_ERROR
-    assert response["block_recent"] == False
+    assert not response["block_recent"]
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
     assert response["block_timestamp"] == "2019-12-20T07:55:33"
@@ -115,7 +114,7 @@ def test_last_block_not_recent_rpc_error(mock_time_range, mock_monero_rpc, caplo
     response = daemon_last_block_check()
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
-    assert response["block_recent"] == False
+    assert not response["block_recent"]
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
     assert response["block_timestamp"] == "---"
@@ -159,7 +158,7 @@ def test_last_block_not_recent_read_timeout(mock_time_range, mock_monero_rpc, ca
     response = daemon_last_block_check()
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
-    assert response["block_recent"] == False
+    assert not response["block_recent"]
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
     assert response["block_timestamp"] == "---"
@@ -203,7 +202,7 @@ def test_last_block_not_recent_connection_error(
     response = daemon_last_block_check()
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
-    assert response["block_recent"] == False
+    assert not response["block_recent"]
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
     assert response["block_timestamp"] == "---"
@@ -243,7 +242,7 @@ def test_last_block_not_recent_timeout(mock_time_range, mock_monero_rpc, caplog)
     response = daemon_last_block_check()
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
-    assert response["block_recent"] == False
+    assert not response["block_recent"]
     assert response["block_recent_offset"] == 12
     assert response["block_recent_offset_unit"] == "minutes"
     assert response["block_timestamp"] == "---"

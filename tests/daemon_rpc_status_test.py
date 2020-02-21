@@ -1,5 +1,4 @@
 import mock
-import pytest
 import logging
 import json
 
@@ -11,7 +10,7 @@ from requests.exceptions import (
 )
 
 from monero_health import (
-    daemon_status_check,
+    daemon_rpc_status_check,
     DAEMON_STATUS_OK,
     DAEMON_STATUS_ERROR,
     DAEMON_STATUS_UNKNOWN,
@@ -25,7 +24,7 @@ def test_daemon_status_ok(mock_monero_rpc, caplog):
         "version": 12,
     }
 
-    response = daemon_status_check()
+    response = daemon_rpc_status_check()
 
     assert response["status"] == DAEMON_STATUS_OK
     assert response["version"] == 12
@@ -46,7 +45,7 @@ def test_daemon_status_not_ok(mock_monero_rpc, caplog):
     }
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
-    response = daemon_status_check()
+    response = daemon_rpc_status_check()
 
     assert response["status"] == DAEMON_STATUS_ERROR
     assert response["version"] == 12
@@ -84,7 +83,7 @@ def test_daemon_status_not_ok_rpc_error(mock_monero_rpc, caplog):
         rpc_error={"message": "Some Monero RPC error.", "code": 11}
     )
 
-    response = daemon_status_check()
+    response = daemon_rpc_status_check()
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
     assert response["version"] == -1
@@ -121,7 +120,7 @@ def test_daemon_status_not_ok_read_timeout(mock_monero_rpc, caplog):
         "Request timed out when reading response."
     )
 
-    response = daemon_status_check()
+    response = daemon_rpc_status_check()
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
     assert response["version"] == -1
@@ -156,7 +155,7 @@ def test_daemon_status_not_ok_connection_error(mock_monero_rpc, caplog):
 
     mock_monero_rpc.side_effect = RequestsConnectionError("Error when connecting.")
 
-    response = daemon_status_check()
+    response = daemon_rpc_status_check()
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
     assert response["version"] == -1
@@ -189,7 +188,7 @@ def test_daemon_status_not_ok_timeout(mock_monero_rpc, caplog):
 
     mock_monero_rpc.side_effect = Timeout("Request timed out.")
 
-    response = daemon_status_check()
+    response = daemon_rpc_status_check()
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
     assert response["version"] == -1

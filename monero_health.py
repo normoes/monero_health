@@ -1,8 +1,20 @@
+"""
+TODOs:
+* tests p2p status
+* rename daemon_status to daemon_rpc_status
+* rename daemon_statis to dameon_status
+* tests daemon_status (rpc and p2p)
+* adapt combined to use daemon_status (rpc and p2p)
+* tag with major version increase
+* differentiate connection reset/aborted by peer for rpc daemon status.
+"""
+
 import logging
 import datetime
 import os
 import sys
 import json
+import socket
 
 from monerorpc.authproxy import (
     AuthServiceProxy,
@@ -17,16 +29,19 @@ logger.setLevel(logging.DEBUG)
 # logging.getLogger("MoneroRPC").setLevel(logging.DEBUG)
 
 URL_DEFAULT = "127.0.0.1"
-PORT_DEFAULT = 18081
+RPC_PORT_DEFAULT = 18081
+P2P_PORT_DEFAULT = 18080
 USER_DEFAULT = ""
-PASSWD_DEFAULT = ""
+# Add 'nosec' comment to make bandit ignore [B105:hardcoded_password_string]
+PASSWD_DEFAULT = ""  # nosec
 OFFSET_DEFAULT = 12
 # Possible values: https://docs.python.org/2/library/datetime.html#timedelta-objects
 OFFSET_UNIT_DEFAULT = "minutes"
 HTTP_TIMEOUT_DEFAULT = MONERO_RPC_HTTP_TIMEOUT
 
-URL = os.environ.get("MONEROD_RPC_URL", URL_DEFAULT)
-PORT = os.environ.get("MONEROD_RPC_PORT", PORT_DEFAULT)
+URL = os.environ.get("MONEROD_URL", URL_DEFAULT)
+RPC_PORT = os.environ.get("MONEROD_RPC_PORT", RPC_PORT_DEFAULT)
+P2P_PORT = os.environ.get("MONEROD_P2P_PORT", P2P_PORT_DEFAULT)
 USER = os.environ.get("MONEROD_RPC_USER", USER_DEFAULT)
 PASSWD = os.environ.get("MONEROD_RPC_PASSWORD", PASSWD_DEFAULT)
 OFFSET = os.environ.get("OFFSET", OFFSET_DEFAULT)
@@ -36,6 +51,8 @@ HTTP_TIMEOUT = os.environ.get("HTTP_TIMEOUT", HTTP_TIMEOUT_DEFAULT)
 HEALTH_KEY = "health"
 LAST_BLOCK_KEY = "last_block"
 DAEMON_KEY = "monerod"
+DAEMON_P2P_KEY = "p2p"
+DAEMON_RPC_KEY = "rpc"
 
 DAEMON_STATUS_OK = "OK"
 DAEMON_STATUS_ERROR = "ERROR"
@@ -85,7 +102,7 @@ def is_timestamp_within_offset(
 def daemon_last_block_check(
     conn=None,
     url=URL,
-    port=PORT,
+    port=RPC_PORT,
     user=USER,
     passwd=PASSWD,
     offset=OFFSET,
@@ -166,7 +183,9 @@ def daemon_last_block_check(
     return response
 
 
-def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD):
+def daemon_rpc_status_check(
+    conn=None, url=URL, port=RPC_PORT, user=USER, passwd=PASSWD
+):
     """Check daemon status.
 
     Uses Monero daemon RPC 'hard_fork_info'.
@@ -217,36 +236,153 @@ def daemon_status_check(conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD)
     return response
 
 
-def daemon_combined_status_check(
-    conn=None, url=URL, port=PORT, user=USER, passwd=PASSWD
+def daemon_p2p_status_check(url=URL, port=P2P_PORT):
+    """Check daemon P2P status.
+
+    Simply connects to the daemon's P2P port to check connectivity.
+    Checks Monero daemon P2P status.
+    """
+
+    error = None
+    response = None
+    status = DAEMON_STATUS_UNKNOWN
+    try:
+        # TCP: SOCK_STREAM
+        # UDP: SOCK_DGRAM
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+
+        logger.info(f"Checking '{url}:{port}'.")
+
+        sock.connect((url, port))
+        status = DAEMON_STATUS_OK
+    # ConnectionError: connection attempt is aborted /refused or connection aborted by the peer.
+    except (ConnectionError) as e:
+        error = {"error": str(e)}
+        status = DAEMON_STATUS_ERROR
+    except Exception as e:
+        error = {"error": str(e)}
+        status = DAEMON_STATUS_UNKNOWN
+    finally:
+        sock.close()
+
+    response = {"status": status}
+    response.update({"host": f"{url}:{port}"})
+
+    if status in (DAEMON_STATUS_ERROR, DAEMON_STATUS_UNKNOWN) or error:
+        if status == DAEMON_STATUS_ERROR:
+            message = f"Status is '{status}'."
+        else:
+            message = f"Cannot determine status."
+        data = {"message": message}
+
+        if not error:
+            error = {"error": message}
+        data.update(error)
+        response.update({"error": data})
+        logger.error(json.dumps(data))
+
+    return response
+
+
+def daemon_stati_check(
+    conn=None,
+    url=URL,
+    port=RPC_PORT,
+    p2p_port=P2P_PORT,
+    user=USER,
+    passwd=PASSWD,
+    consider_p2p=False,
 ):
     """Check combined daemon status.
 
+    Gets Monero daemon status from Monero daemon RPC 'hard_fork_info'.
+    Considers Monero daemon P2P status in daemon status, if 'consider_p2p==True'. The result of the P2P check will always be included.
+    """
+
+    response = {}
+    data = {}
+
+    daemon_rpc_status = DAEMON_STATUS_UNKNOWN
+    daemon_p2p_status = DAEMON_STATUS_UNKNOWN
+
+    result = daemon_rpc_status_check(url=url, port=port, user=user, passwd=passwd)
+    if result:
+        daemon_rpc_status = result.get("status", daemon_rpc_status)
+        data.update({DAEMON_RPC_KEY: result})
+        response.update(data)
+
+    result = daemon_p2p_status_check(url=url, port=p2p_port)
+    if result:
+        daemon_p2p_status = result.get("status", daemon_p2p_status)
+        data.update({DAEMON_P2P_KEY: result})
+        response.update(data)
+
+    stati_to_consider = [daemon_rpc_status]
+    if consider_p2p:
+        stati_to_consider.append(daemon_p2p_status)
+
+    status = None
+    max_weight = -1
+    for status_ in stati_to_consider:
+        max_weight = max(max_weight, DAEMON_STATUS_WEIGHTS_.get(status_, -1))
+
+    status = DAEMON_STATUS_WEIGHTS[max_weight]
+
+    data = {"status": status, "host": url}
+    response.update(data)
+
+    message = f"Combined daemon status (RPC, P2P) is '{status}'."
+    data = {"message": message}
+    logger.info(json.dumps(data))
+
+    return response
+
+
+def daemon_combined_status_check(
+    conn=None,
+    url=URL,
+    port=RPC_PORT,
+    p2p_port=P2P_PORT,
+    user=USER,
+    passwd=PASSWD,
+    consider_p2p=False,
+):
+    """Check combined daemon status.
+
+    Checks all stati. Can inlcude dameon's P2P status.
+
     Gets last block status from offset to determine an 'old'/'outdated' last block.
     Gets Monero daemon status from Monero daemon RPC 'hard_fork_info'.
+    Considers Monero daemon P2P status in daemon status, if 'consider_p2p==True'. The result of the P2P check will always be included.
     """
 
     response = {}
 
     last_block_status = DAEMON_STATUS_UNKNOWN
-    last_block_host = ""
     daemon_status = DAEMON_STATUS_UNKNOWN
-    daemon_host = ""
 
     result = daemon_last_block_check(url=url, port=port, user=user, passwd=passwd)
     if result:
         last_block_status = result.get("status", last_block_status)
-        last_block_host = result.pop("host", last_block_host)
         data = {LAST_BLOCK_KEY: result}
         response.update(data)
 
-    result = daemon_status_check(url=url, port=port, user=user, passwd=passwd)
+    # Check daemon stati.
+    result = daemon_stati_check(
+        url=url,
+        port=port,
+        p2p_port=p2p_port,
+        user=user,
+        passwd=passwd,
+        consider_p2p=consider_p2p,
+    )
     if result:
         daemon_status = result.get("status", daemon_status)
-        daemon_host = result.pop("host", daemon_host)
         data = {DAEMON_KEY: result}
         response.update(data)
 
+    print(f"--{daemon_status}")
     stati_to_consider = (last_block_status, daemon_status)
 
     status = None
@@ -256,8 +392,7 @@ def daemon_combined_status_check(
 
     status = DAEMON_STATUS_WEIGHTS[max_weight]
 
-    # 'last_block_host' should always be same as 'daemon_host'.
-    data = {"status": status, "host": daemon_host}
+    data = {"status": status, "host": url}
     response.update(data)
 
     message = f"Combined status is '{status}'."
@@ -268,17 +403,40 @@ def daemon_combined_status_check(
 
 
 def main():
+    print("----Last block check----:")
     print(
         daemon_last_block_check(
             url=URL,
-            port=PORT,
+            port=RPC_PORT,
             user=USER,
             passwd=PASSWD,
             offset=OFFSET,
             offset_unit=OFFSET_UNIT,
         )
     )
-    print(daemon_status_check(url=URL, port=PORT, user=USER, passwd=PASSWD))
+    print("----Daemon rpc check----:")
+    print(daemon_rpc_status_check(url=URL, port=RPC_PORT, user=USER, passwd=PASSWD))
+    print("----Daemon p2p check----:")
+    print(daemon_p2p_status_check(url=URL, port=P2P_PORT))
+    print("----Daemon stati check----:")
+    print(
+        daemon_stati_check(url=URL, port=RPC_PORT, p2p_port=P2P_PORT, consider_p2p=True)
+    )
+    print("----Overall RPC check----:")
+    print(
+        daemon_combined_status_check(url=URL, port=RPC_PORT, user=USER, passwd=PASSWD)
+    )
+    print("----Overall check----:")
+    print(
+        daemon_combined_status_check(
+            url=URL,
+            port=RPC_PORT,
+            p2p_port=P2P_PORT,
+            user=USER,
+            passwd=PASSWD,
+            consider_p2p=True,
+        )
+    )
 
 
 if __name__ == "__main__":

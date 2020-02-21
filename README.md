@@ -20,7 +20,7 @@ The connection to the Monero daemon can be configured using environment variable
 
 | environment variable | default value |
 |----------------------|---------------|
-| `MONEROD_RPC_URL` | `"127.0.0.1"` |
+| `MONEROD_URL` | `"127.0.0.1"` |
 | `MONEROD_RPC_PORT` | `18081` |
 | `MONEROD_RPC_USER` | `""` |
 | `MONEROD_RPC_PASSWORD` | `""` |
@@ -57,7 +57,7 @@ This module is not really supposed to be run as a script, rather as a module.
 
 However, it is possible to directly run it as a script. it will then output the complete information:
 ```python
-    MONEROD_RPC_URL=node.xmr.to python monero_health.py
+    MONEROD_URL=node.xmr.to python monero_health.py
     # Last block age.
     INFO:DaemonHealth:Checking 'node.xmr.to:18081'.
     {'hash': 'b0f683278980ac65adfa6600c040d38f29f2299912c6c580d04f2f6704bf11d3', 'block_timestamp': '2019-12-19T15:02:16', 'check_timestamp': '2019-12-19T15:08:29', 'status': 'OK', 'block_recent': True, 'block_recent_offset': 12, 'block_recent_offset_unit': 'minutes'}
@@ -147,4 +147,54 @@ python -m venv venv
 pip install --upgrade -r requirements.txt
 # Run tests.
 pytest
+```
+
+## Full example
+
+When run as a script (against the XMR.to public node `node.xmr.to`):
+```
+MONEROD_URL=node.xmr.to python monero_health.py
+```
+
+all health and status checks are run one after another:
+* Last block (last block's timestamp).
+* Daemon RPC status (port `18081`, RPC method `hard_fork_info`).
+* Daemon P2P status (port `18080`).
+* Both dameon stati (combined `status` key).
+* Run all checks **but do not consider** the daemon P2P status in the resulting `status` key (dameon P2P result is still returned).
+* Run all checks **and consider** the daemon P2P status in the resulting `status` key.
+
+The result will look like this:
+```
+----Last block check----:
+INFO:DaemonHealth:Checking 'node.xmr.to:18081'.
+{'hash': '552cc36a9f0d9417876aaac61ee45b9b4582b054dd4f33e7534f79736318e002', 'block_age': '0:01:54', 'block_timestamp': '2020-02-21T16:34:08', 'check_timestamp': '2020-02-21T16:36:02', 'status': 'OK', 'block_recent': True, 'block_recent_offset': 12, 'block_recent_offset_unit': 'minutes', 'host': 'node.xmr.to:18081'}
+----Daemon rpc check----:
+INFO:DaemonHealth:Checking 'node.xmr.to:18081'.
+{'status': 'OK', 'version': 12, 'host': 'node.xmr.to:18081'}
+----Daemon p2p check----:
+INFO:DaemonHealth:Checking 'node.xmr.to:18080'.
+{'status': 'OK', 'host': 'node.xmr.to:18080'}
+----Daemon stati check----:
+INFO:DaemonHealth:Checking 'node.xmr.to:18081'.
+INFO:DaemonHealth:Checking 'node.xmr.to:18080'.
+INFO:DaemonHealth:{"message": "Combined daemon status (RPC, P2P) is 'OK'."}
+{'rpc': {'status': 'OK', 'version': 12, 'host': 'node.xmr.to:18081'}, 'p2p': {'status': 'OK', 'host': 'node.xmr.to:18080'}, 'status': 'OK', 'host': 'node.xmr.to'}
+----Overall RPC check----:
+INFO:DaemonHealth:Checking 'node.xmr.to:18081'.
+INFO:DaemonHealth:Checking 'node.xmr.to:18081'.
+INFO:DaemonHealth:Checking 'node.xmr.to:18080'.
+INFO:DaemonHealth:{"message": "Combined daemon status (RPC, P2P) is 'OK'."}
+--OK
+INFO:DaemonHealth:{"message": "Combined status is 'OK'."}
+{'last_block': {'hash': '552cc36a9f0d9417876aaac61ee45b9b4582b054dd4f33e7534f79736318e002', 'block_age': '0:01:55', 'block_timestamp': '2020-02-21T16:34:08', 'check_timestamp': '2020-02-21T16:36:03', 'status': 'OK', 'block_recent': True, 'block_recent_offset': 12, 'block_recent_offset_unit': 'minutes', 'host': 'node.xmr.to:18081'}, 'monerod': {'rpc': {'status': 'OK', 'version': 12, 'host': 'node.xmr.to:18081'}, 'p2p': {'status': 'OK', 'host': 'node.xmr.to:18080'}, 'status': 'OK', 'host': 'node.xmr.to'}, 'status': 'OK', 'host': 'node.xmr.to'}
+----Overall check----:
+INFO:DaemonHealth:Checking 'node.xmr.to:18081'.
+INFO:DaemonHealth:Checking 'node.xmr.to:18081'.
+INFO:DaemonHealth:Checking 'node.xmr.to:18080'.
+INFO:DaemonHealth:{"message": "Combined daemon status (RPC, P2P) is 'OK'."}
+--OK
+INFO:DaemonHealth:{"message": "Combined status is 'OK'."}
+{'last_block': {'hash': '552cc36a9f0d9417876aaac61ee45b9b4582b054dd4f33e7534f79736318e002', 'block_age': '0:01:56', 'block_timestamp': '2020-02-21T16:34:08', 'check_timestamp': '2020-02-21T16:36:04', 'status': 'OK', 'block_recent': True, 'block_recent_offset': 12, 'block_recent_offset_unit': 'minutes', 'host': 'node.xmr.to:18081'}, 'monerod': {'rpc': {'status': 'OK', 'version': 12, 'host': 'node.xmr.to:18081'}, 'p2p': {'status': 'OK', 'host': 'node.xmr.to:18080'}, 'status': 'OK', 'host': 'node.xmr.to'}, 'status': 'OK', 'host': 'node.xmr.to'}
+(venv) [norman ~/git_sources/monero_health.git (master *+%=)]$
 ```
