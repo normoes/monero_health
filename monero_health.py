@@ -254,7 +254,7 @@ def daemon_p2p_status_check(url=URL, port=P2P_PORT):
 
         logger.info(f"Checking '{url}:{port}'.")
 
-        sock.connect((url, port))
+        sock.connect((url, int(port)))
         status = DAEMON_STATUS_OK
     # ConnectionError: connection attempt is aborted /refused or connection aborted by the peer.
     except (ConnectionError) as e:
