@@ -1,27 +1,27 @@
 # Monero health
 
-This is work in progress.
-
 Monero health is supposed to provide information about the Monero daemon health.
 
 There are two health checks at the moment:
-* Checking the Monero daemon status using the `hard_fork_info` RPC.
+* Checking the Monero daemon RPC status using the `hard_fork_info` RPC.
+* Checking the Monero daemon P2P status (checks the given P2P port).
 * Checking the age of the last block on the daemon using a pre-configured offset.
 
 **_Note_**:
 
-The Monero daemon information are retrieved using the Monero daemon JSON RPC.
+The Monero daemon RPC information are retrieved using the Monero daemon JSON RPC.
 The RPC connection is established using [`python-monerorpc`](https://github.com/monero-ecosystem/python-monerorpc).
 
 ## Configuration
 
-### Monero daemon connection
-The connection to the Monero daemon can be configured using environment variables:
+### Monero daemon RPC connection
+The connection to the Monero daemon RPC can be configured using environment variables:
 
 | environment variable | default value |
 |----------------------|---------------|
 | `MONEROD_URL` | `"127.0.0.1"` |
 | `MONEROD_RPC_PORT` | `18081` |
+| `MONEROD_P2P_PORT` | `18080` |
 | `MONEROD_RPC_USER` | `""` |
 | `MONEROD_RPC_PASSWORD` | `""` |
 
@@ -30,6 +30,9 @@ The connection to the Monero daemon can be configured using environment variable
 The RPC connection is established using [`python-monerorpc`](https://github.com/monero-ecosystem/python-monerorpc).
 
 ### Last block age
+```
+from monero_health import daemon_last_block_check
+```
 
 The last block's timestamp is checked against a given pre-configured offset:
 
@@ -43,12 +46,24 @@ I.e that the last block is considered out-of-date as soon as it becomes older th
 The Monero RPC method used is:
 * `get_last_block_header`
 
-### Daemon status
+### Daemon RPC status
+```
+from monero_health import daemon_rpc_status_check
+```
 
-No configuration is needed.
+No additional configuration is needed.
 
 The Monero RPC method used is:
 * `hard_fork_info`
+
+### Daemon P2P status
+```
+from monero_health import daemon_p2p_status_check
+```
+
+No additional configuration is needed.
+
+A socket connection is established, which checks the connectivity to the P2P port.
 
 ## Results
 
@@ -100,21 +115,21 @@ When imported as a module the functions can be imported/called separately, like 
 The `status` returned can have the following values:
 * `OK`
   - For a last block that **is not** considered old: (`daemon_last_block_check`)
-  - For a daemon with status `OK`: (`daemon_status_check`)
+  - For a daemon with status `OK`: (`daemon_rpc_status_check`, `daemon_p2p_status_check`, `daemon_stati_check`)
   - Every possible status is `OK`: (`daemon_combined_status_check`)
 * `ERROR`
   - For a last block that **is** considered old: (`daemon_last_block_check`)
-  - For a daemon with status `ERROR`: (`daemon_status_check`)
+  - For a daemon with status `ERROR`: (`daemon_rpc_status_check`, `daemon_p2p_status_check`, `daemon_stati_check`)
   - At least one possible status is `ERROR`: (`daemon_combined_status_check`)
 * `UNKNOWN`
-  - In case of a connection error (mostly related to HTTP requests): (`daemon_last_block_check`, `daemon_status_check`)
+  - In case of a connection error not initiated by the peer (mostly related to HTTP requests): (`daemon_last_block_check`, `daemon_rpc_status_check`, `daemon_p2p_status_check`, `daemon_stati_check`)
   - At least one possible status is `UNKNOWN`: (`daemon_combined_status_check`)
 
 ### Errors
 
-In case of an error an `error` key is added to the responses of:
+In case of an error, an `error` key is added to the responses of:
 * `daemon_last_block_check`
-* `daemon_status_check`
+* `daemon_rpc_status_check`, `daemon_p2p_status_check`, `daemon_stati_check`
 but not to `daemon_combined_status_check`.
 
 This error key always contains the keys:
@@ -136,17 +151,6 @@ Example - No Monero daemon running at `127.0.0.1:18081`:
     "hash": "---",
     "status": "UNKNOWN"
 }
-```
-
-## Tests
-```
-# Create and activate a virtual environment.
-python -m venv venv
-. venv/bin/activate
-# Install the dependencies.
-pip install --upgrade -r requirements.txt
-# Run tests.
-pytest
 ```
 
 ## Full example
@@ -197,4 +201,15 @@ INFO:DaemonHealth:{"message": "Combined daemon status (RPC, P2P) is 'OK'."}
 INFO:DaemonHealth:{"message": "Combined status is 'OK'."}
 {'last_block': {'hash': '552cc36a9f0d9417876aaac61ee45b9b4582b054dd4f33e7534f79736318e002', 'block_age': '0:01:56', 'block_timestamp': '2020-02-21T16:34:08', 'check_timestamp': '2020-02-21T16:36:04', 'status': 'OK', 'block_recent': True, 'block_recent_offset': 12, 'block_recent_offset_unit': 'minutes', 'host': 'node.xmr.to:18081'}, 'monerod': {'rpc': {'status': 'OK', 'version': 12, 'host': 'node.xmr.to:18081'}, 'p2p': {'status': 'OK', 'host': 'node.xmr.to:18080'}, 'status': 'OK', 'host': 'node.xmr.to'}, 'status': 'OK', 'host': 'node.xmr.to'}
 (venv) [norman ~/git_sources/monero_health.git (master *+%=)]$
+```
+
+## Tests
+```
+# Create and activate a virtual environment.
+python -m venv venv
+. venv/bin/activate
+# Install the dependencies.
+pip install --upgrade -r requirements.txt
+# Run tests.
+pytest
 ```
