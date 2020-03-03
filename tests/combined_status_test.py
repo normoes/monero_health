@@ -93,7 +93,7 @@ def test_combined_status_ok(mock_last_block, mock_daemon, caplog):
 @mock.patch("monero_health.AuthServiceProxy")
 @mock.patch("monero_health.is_timestamp_within_offset")
 @mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_combined_status_old_last_block(
     mock_socket, mock_daemon, mock_time_range, mock_monero_rpc, caplog
 ):
@@ -177,7 +177,7 @@ def test_combined_status_old_last_block(
 
 @mock.patch("monero_health.AuthServiceProxy")
 @mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_combined_status_daemon_rpc_status_error(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -264,7 +264,7 @@ def test_combined_status_daemon_rpc_status_error(
 
 @mock.patch("monero_health.AuthServiceProxy")
 @mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_combined_status_daemon_p2p_status_ignore_error(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -292,9 +292,7 @@ def test_combined_status_daemon_p2p_status_ignore_error(
         "version": 12,
     }
 
-    mock_socket.socket.return_value.connect.side_effect = ConnectionError(
-        "Something went wrong."
-    )
+    mock_socket.side_effect = ConnectionError("Something went wrong.")
 
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
@@ -355,7 +353,7 @@ def test_combined_status_daemon_p2p_status_ignore_error(
 
 @mock.patch("monero_health.AuthServiceProxy")
 @mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_combined_status_daemon_p2p_status_error(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -383,9 +381,7 @@ def test_combined_status_daemon_p2p_status_error(
         "version": 12,
     }
 
-    mock_socket.socket.return_value.connect.side_effect = ConnectionError(
-        "Something went wrong."
-    )
+    mock_socket.side_effect = ConnectionError("Something went wrong.")
 
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
@@ -447,7 +443,7 @@ def test_combined_status_daemon_p2p_status_error(
 @mock.patch("monero_health.AuthServiceProxy")
 @mock.patch("monero_health.is_timestamp_within_offset")
 @mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_combined_status_unknown_last_block_status(
     mock_socket, mock_daemon, mock_time_range, mock_monero_rpc, caplog
 ):
@@ -523,7 +519,7 @@ def test_combined_status_unknown_last_block_status(
 
 @mock.patch("monero_health.AuthServiceProxy")
 @mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_combined_status_unknown_daemon_rpc_status(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -606,7 +602,7 @@ def test_combined_status_unknown_daemon_rpc_status(
 
 @mock.patch("monero_health.AuthServiceProxy")
 @mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_combined_status_ignore_unknown_daemon_p2p_status(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -632,9 +628,7 @@ def test_combined_status_ignore_unknown_daemon_p2p_status(
         "version": 12,
     }
 
-    mock_socket.socket.return_value.connect.side_effect = socket.gaierror(
-        "Something went wrong."
-    )
+    mock_socket.side_effect = socket.gaierror("Something went wrong.")
 
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
@@ -694,7 +688,7 @@ def test_combined_status_ignore_unknown_daemon_p2p_status(
 
 @mock.patch("monero_health.AuthServiceProxy")
 @mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_combined_status_unknown_daemon_p2p_status(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -720,9 +714,7 @@ def test_combined_status_unknown_daemon_p2p_status(
         "version": 12,
     }
 
-    mock_socket.socket.return_value.connect.side_effect = socket.gaierror(
-        "Something went wrong."
-    )
+    mock_socket.side_effect = socket.gaierror("Something went wrong.")
 
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 

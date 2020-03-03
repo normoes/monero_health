@@ -11,7 +11,7 @@ from monero_health import (
 )
 
 
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_daemon_p2p_status_ok(mock_socket, caplog):
 
     response = daemon_p2p_status_check()
@@ -26,13 +26,11 @@ def test_daemon_p2p_status_ok(mock_socket, caplog):
     caplog.clear()
 
 
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_daemon_status_peer_error(mock_socket, caplog):
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
-    mock_socket.socket.return_value.connect.side_effect = ConnectionError(
-        "Something went wrong."
-    )
+    mock_socket.side_effect = ConnectionError("Something went wrong.")
 
     response = daemon_p2p_status_check()
 
@@ -58,13 +56,11 @@ def test_daemon_status_peer_error(mock_socket, caplog):
     caplog.clear()
 
 
-@mock.patch("monero_health.socket")
+@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
 def test_daemon_status_connectivity_error(mock_socket, caplog):
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
-    mock_socket.socket.return_value.connect.side_effect = socket.gaierror(
-        "Something went wrong."
-    )
+    mock_socket.side_effect = socket.gaierror("Something went wrong.")
 
     response = daemon_p2p_status_check()
 
