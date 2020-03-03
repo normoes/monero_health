@@ -1,20 +1,8 @@
-"""
-TODOs:
-* tests p2p status
-* rename daemon_status to daemon_rpc_status
-* rename daemon_statis to dameon_status
-* tests daemon_status (rpc and p2p)
-* adapt combined to use daemon_status (rpc and p2p)
-* tag with major version increase
-* differentiate connection reset/aborted by peer for rpc daemon status.
-"""
-
 import logging
 import datetime
 import os
 import sys
 import json
-import socket
 
 from monerorpc.authproxy import (
     AuthServiceProxy,
@@ -22,6 +10,8 @@ from monerorpc.authproxy import (
     HTTP_TIMEOUT as MONERO_RPC_HTTP_TIMEOUT,
 )
 from requests.exceptions import RequestException
+
+from monero_scripts import connect_to_node
 
 logging.basicConfig()
 logger = logging.getLogger("DaemonHealth")
@@ -246,15 +236,10 @@ def daemon_p2p_status_check(url=URL, port=P2P_PORT):
     error = None
     response = None
     status = DAEMON_STATUS_UNKNOWN
+
     try:
-        # TCP: SOCK_STREAM
-        # UDP: SOCK_DGRAM
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)
-
         logger.info(f"Checking '{url}:{port}'.")
-
-        sock.connect((url, int(port)))
+        connect_to_node.try_to_connect_keep_errors((url, int(port)))
         status = DAEMON_STATUS_OK
     # ConnectionError: connection attempt is aborted /refused or connection aborted by the peer.
     except (ConnectionError) as e:
@@ -263,8 +248,6 @@ def daemon_p2p_status_check(url=URL, port=P2P_PORT):
     except Exception as e:
         error = {"error": str(e)}
         status = DAEMON_STATUS_UNKNOWN
-    finally:
-        sock.close()
 
     response = {"status": status}
     response.update({"host": f"{url}:{port}"})
@@ -413,19 +396,21 @@ def main():
             offset_unit=OFFSET_UNIT,
         )
     )
-    print("----Daemon rpc check----:")
+    print("----Daemon rpc check----")
     print(daemon_rpc_status_check(url=URL, port=RPC_PORT, user=USER, passwd=PASSWD))
-    print("----Daemon p2p check----:")
+    print("----Daemon p2p check----")
     print(daemon_p2p_status_check(url=URL, port=P2P_PORT))
-    print("----Daemon stati check----:")
+    print("----Daemon stati check, not considering P2P status----")
+    print(daemon_stati_check(url=URL, port=RPC_PORT, p2p_port=P2P_PORT))
+    print("----Daemon stati check, also considering P2P status----")
     print(
         daemon_stati_check(url=URL, port=RPC_PORT, p2p_port=P2P_PORT, consider_p2p=True)
     )
-    print("----Overall RPC check----:")
+    print("----Overall check, not considering P2P status----")
     print(
         daemon_combined_status_check(url=URL, port=RPC_PORT, user=USER, passwd=PASSWD)
     )
-    print("----Overall check----:")
+    print("----Overall check, also considering P2P status----")
     print(
         daemon_combined_status_check(
             url=URL,
