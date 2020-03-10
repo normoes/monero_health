@@ -3,6 +3,7 @@ import datetime
 import os
 import sys
 import json
+from distutils.util import strtobool
 
 from monerorpc.authproxy import (
     AuthServiceProxy,
@@ -38,6 +39,17 @@ OFFSET = os.environ.get("OFFSET", OFFSET_DEFAULT)
 OFFSET_UNIT = os.environ.get("OFFSET_UNIT", OFFSET_UNIT_DEFAULT)
 HTTP_TIMEOUT = os.environ.get("HTTP_TIMEOUT", HTTP_TIMEOUT_DEFAULT)
 
+CONSIDER_P2P_STATUS_DEFAULT = False
+try:
+    # https://docs.python.org/3/distutils/apiref.html#distutils.util.strtobool
+    CONSIDER_P2P_STATUS = bool(
+        strtobool(
+            os.environ.get("CONSIDER_P2P_STATUS", str(CONSIDER_P2P_STATUS_DEFAULT))
+        )
+    )
+except ValueError:
+    CONSIDER_P2P_STATUS = CONSIDER_P2P_STATUS_DEFAULT
+
 HEALTH_KEY = "health"
 LAST_BLOCK_KEY = "last_block"
 DAEMON_KEY = "monerod"
@@ -63,7 +75,7 @@ DAEMON_STATUS_WEIGHTS_ = {
 
 
 def is_timestamp_within_offset(
-    timestamp=None, now=None, offset: int = OFFSET, offset_unit=OFFSET_UNIT_DEFAULT
+    timestamp=None, now=None, offset: int = OFFSET, offset_unit=OFFSET_UNIT
 ) -> bool:
     if not timestamp or not now:
         return None
@@ -275,7 +287,7 @@ def daemon_stati_check(
     p2p_port=P2P_PORT,
     user=USER,
     passwd=PASSWD,
-    consider_p2p=False,
+    consider_p2p=CONSIDER_P2P_STATUS,
 ):
     """Check combined daemon status.
 
@@ -329,7 +341,7 @@ def daemon_combined_status_check(
     p2p_port=P2P_PORT,
     user=USER,
     passwd=PASSWD,
-    consider_p2p=False,
+    consider_p2p=CONSIDER_P2P_STATUS,
 ):
     """Check combined daemon status.
 
@@ -385,6 +397,7 @@ def daemon_combined_status_check(
 
 
 def main():
+
     print("----Last block check----:")
     print(
         daemon_last_block_check(
