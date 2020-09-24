@@ -1,5 +1,5 @@
-[![GitHub Release](https://img.shields.io/github/v/release/normoes/monero_health_check.svg)](https://github.com/normoes/monero_health_check/releases)
-[![GitHub Tags](https://img.shields.io/github/v/tag/normoes/monero_health_check.svg)](https://github.com/normoes/monero_health_check/tags)
+[![GitHub Release](https://img.shields.io/github/v/release/normoes/monero_health.svg)](https://github.com/normoes/monero_health/releases)
+[![GitHub Tags](https://img.shields.io/github/v/tag/normoes/monero_health.svg)](https://github.com/normoes/monero_health/tags?sort=semver)
 
 # Monero health
 
