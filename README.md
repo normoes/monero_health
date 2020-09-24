@@ -165,17 +165,19 @@ This error key always contains the keys:
 Example - No Monero daemon running at `127.0.0.1:18081`:
 ```
 {
-    "block_recent": false,
-    "block_recent_offset": "12",
-    "block_recent_offset_unit": "minutes",
-    "block_timestamp": "---",
-    "check_timestamp": "2020-01-07T14:53:24",
-    "error": {
-        "error": "-341: could not establish a connection, original error: HTTPConnectionPool(host='127.0.0.1', port=18081): Max retries exceeded with url: /json_rpc (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fe25e449cd0>: Failed to establish a new connection: [Errno 111] Connection refused'))",
-        "message": "Cannot determine daemon status. Daemon: '127.0.0.1:18081'."
-    },
     "hash": "---",
-    "status": "UNKNOWN"
+    "block_age": -1,
+    "block_timestamp": "---",
+    "check_timestamp": "2020-09-24T11:52:30",
+    "status": "UNKNOWN",
+    "block_recent": false,
+    "block_recent_offset": 12,
+    "block_recent_offset_unit": "minutes",
+    "host": "mainnet.community.xmr:18081",
+    "error": {
+        "message": "Cannot determine status.",
+        "error": "-341: Could not establish a connection, original error: 'HTTPConnectionPool(host='mainnet.community.xmr', port=18081): Max retries exceeded with url: /json_rpc (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f0f3bb5b150>: Failed to establish a new connection: [Errno -5] No address associated with hostname'))'."
+    }
 }
 ```
 
