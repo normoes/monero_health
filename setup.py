@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-VERSION = "v1.1.1"
+VERSION = "v1.1.3"
 
 setup(
     name="monero_health",
