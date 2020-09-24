@@ -5,7 +5,7 @@ import socket
 
 from monerorpc.authproxy import JSONRPCException
 
-from monero_health import (
+from monero_health.monero_health import (
     daemon_combined_status_check,
     DAEMON_STATUS_OK,
     DAEMON_STATUS_ERROR,
@@ -18,8 +18,8 @@ from monero_health import (
 )
 
 
-@mock.patch("monero_health.daemon_stati_check")
-@mock.patch("monero_health.daemon_last_block_check")
+@mock.patch("monero_health.monero_health.daemon_stati_check")
+@mock.patch("monero_health.monero_health.daemon_last_block_check")
 def test_combined_status_ok(mock_last_block, mock_daemon, caplog):
     last_block_result = {
         "block_recent": True,
@@ -33,11 +33,10 @@ def test_combined_status_ok(mock_last_block, mock_daemon, caplog):
         "block_age": "0:00:19",
     }
     mock_last_block.return_value = last_block_result
-    # Add 'noqa' comment to make flak8 ignore E231 missing whitespace after ','
+    # Add 'noqa' comment to make flake8 ignore E231 missing whitespace after ','
     daemon_result = {
         DAEMON_RPC_KEY: {
             "status": DAEMON_STATUS_OK,
-            "version": 12,
             "host": "127.0.0.1:18081",
         },
         DAEMON_P2P_KEY: {
@@ -46,6 +45,7 @@ def test_combined_status_ok(mock_last_block, mock_daemon, caplog):
         },
         "host": "127.0.0.1",
         "status": DAEMON_STATUS_OK,
+        "version": 12,
     }
     mock_daemon.return_value = daemon_result
 
@@ -71,12 +71,13 @@ def test_combined_status_ok(mock_last_block, mock_daemon, caplog):
     assert "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["host"] == "127.0.0.1"
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_OK
+    assert response[DAEMON_KEY]["version"] == 12
     assert DAEMON_RPC_KEY in response[DAEMON_KEY]
     assert DAEMON_P2P_KEY in response[DAEMON_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_OK
@@ -86,14 +87,19 @@ def test_combined_status_ok(mock_last_block, mock_daemon, caplog):
         assert record.levelname == "INFO", "Wrong log message."
         json_message = json.loads(record.message)
         assert "message" in json_message, "Wrong log message."
-        assert json_message["message"] == f"Combined status is '{DAEMON_STATUS_OK}'."
+        assert (
+            json_message["message"]
+            == f"Combined status is '{DAEMON_STATUS_OK}'."
+        )
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.is_timestamp_within_offset")
-@mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.is_timestamp_within_offset")
+@mock.patch("monero_health.monero_health.daemon_rpc_status_check")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_combined_status_old_last_block(
     mock_socket, mock_daemon, mock_time_range, mock_monero_rpc, caplog
 ):
@@ -142,12 +148,13 @@ def test_combined_status_old_last_block(
     assert "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["host"] == "127.0.0.1"
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_OK
+    assert response[DAEMON_KEY]["version"] == 12
     assert DAEMON_RPC_KEY in response[DAEMON_KEY]
     assert DAEMON_P2P_KEY in response[DAEMON_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_OK
@@ -175,9 +182,11 @@ def test_combined_status_old_last_block(
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.daemon_last_block_check")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_combined_status_daemon_rpc_status_error(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -233,8 +242,10 @@ def test_combined_status_daemon_rpc_status_error(
     assert DAEMON_P2P_KEY in response[DAEMON_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_ERROR
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["version"] == 12
+    assert (
+        response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_ERROR
+    )
+    assert "version" not in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_OK
@@ -262,15 +273,17 @@ def test_combined_status_daemon_rpc_status_error(
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.daemon_last_block_check")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_combined_status_daemon_p2p_status_ignore_error(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
     """Check combined daemon status.
 
-    Daemon P2P status is 'ERROR' due to a connection error by the peer, but the P2P status is ignored in the resultng dameon status.
+    Daemon P2P status is 'ERROR' due to a connection error by the peer, but the P2P status is ignored in the resultng daemon status.
     Last block status is fine.
     """
 
@@ -318,15 +331,18 @@ def test_combined_status_daemon_p2p_status_ignore_error(
     assert "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["host"] == "127.0.0.1"
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_OK
+    assert response[DAEMON_KEY]["version"] == 12
     assert DAEMON_RPC_KEY in response[DAEMON_KEY]
     assert DAEMON_P2P_KEY in response[DAEMON_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
-    assert response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_ERROR
+    assert (
+        response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_ERROR
+    )
 
     assert "error" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert "error" in response[DAEMON_KEY][DAEMON_P2P_KEY]["error"]
@@ -351,9 +367,11 @@ def test_combined_status_daemon_p2p_status_ignore_error(
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.daemon_last_block_check")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_combined_status_daemon_p2p_status_error(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -407,15 +425,18 @@ def test_combined_status_daemon_p2p_status_error(
     assert "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["host"] == "127.0.0.1"
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_ERROR
+    assert response[DAEMON_KEY]["version"] == 12
     assert DAEMON_RPC_KEY in response[DAEMON_KEY]
     assert DAEMON_P2P_KEY in response[DAEMON_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
-    assert response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_ERROR
+    assert (
+        response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_ERROR
+    )
 
     assert "error" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert "error" in response[DAEMON_KEY][DAEMON_P2P_KEY]["error"]
@@ -440,10 +461,12 @@ def test_combined_status_daemon_p2p_status_error(
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.is_timestamp_within_offset")
-@mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.is_timestamp_within_offset")
+@mock.patch("monero_health.monero_health.daemon_rpc_status_check")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_combined_status_unknown_last_block_status(
     mock_socket, mock_daemon, mock_time_range, mock_monero_rpc, caplog
 ):
@@ -467,7 +490,7 @@ def test_combined_status_unknown_last_block_status(
 
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
-    response = daemon_combined_status_check()
+    response = daemon_combined_status_check(consider_p2p=True,)
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
     assert response["host"] == "127.0.0.1"
@@ -486,12 +509,13 @@ def test_combined_status_unknown_last_block_status(
     assert "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["host"] == "127.0.0.1"
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_OK
+    assert response[DAEMON_KEY]["version"] == 12
     assert DAEMON_RPC_KEY in response[DAEMON_KEY]
     assert DAEMON_P2P_KEY in response[DAEMON_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_OK
@@ -500,10 +524,12 @@ def test_combined_status_unknown_last_block_status(
     assert "error" in response[LAST_BLOCK_KEY]["error"]
     assert "message" in response[LAST_BLOCK_KEY]["error"]
     assert (
-        response[LAST_BLOCK_KEY]["error"]["error"] == "11: Some Monero RPC error."
+        response[LAST_BLOCK_KEY]["error"]["error"]
+        == "11: Some Monero RPC error."
     ), "Wrong error."
     assert (
-        response[LAST_BLOCK_KEY]["error"]["message"] == "Cannot determine status."
+        response[LAST_BLOCK_KEY]["error"]["message"]
+        == "Cannot determine status."
     ), "Wrong error."
 
     assert len(caplog.records) == 1
@@ -517,9 +543,11 @@ def test_combined_status_unknown_last_block_status(
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.daemon_last_block_check")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_combined_status_unknown_daemon_rpc_status(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -546,7 +574,7 @@ def test_combined_status_unknown_daemon_rpc_status(
 
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
-    response = daemon_combined_status_check()
+    response = daemon_combined_status_check(consider_p2p=True,)
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
     assert response["host"] == "127.0.0.1"
@@ -567,12 +595,15 @@ def test_combined_status_unknown_daemon_rpc_status(
     assert "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["host"] == "127.0.0.1"
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_UNKNOWN
+    assert response[DAEMON_KEY]["version"] == -1
     assert DAEMON_RPC_KEY in response[DAEMON_KEY]
     assert DAEMON_P2P_KEY in response[DAEMON_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_UNKNOWN
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["version"] == -1
+    assert (
+        response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_UNKNOWN
+    )
+    assert "version" not in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_OK
@@ -600,9 +631,11 @@ def test_combined_status_unknown_daemon_rpc_status(
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.daemon_last_block_check")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_combined_status_ignore_unknown_daemon_p2p_status(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -653,15 +686,18 @@ def test_combined_status_ignore_unknown_daemon_p2p_status(
     assert "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["host"] == "127.0.0.1"
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_OK
+    assert response[DAEMON_KEY]["version"] == 12
     assert DAEMON_RPC_KEY in response[DAEMON_KEY]
     assert DAEMON_P2P_KEY in response[DAEMON_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
-    assert response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_UNKNOWN
+    assert (
+        response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_UNKNOWN
+    )
 
     assert "error" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert "error" in response[DAEMON_KEY][DAEMON_P2P_KEY]["error"]
@@ -686,9 +722,11 @@ def test_combined_status_ignore_unknown_daemon_p2p_status(
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.daemon_last_block_check")
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.daemon_last_block_check")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_combined_status_unknown_daemon_p2p_status(
     mock_socket, mock_last_block, mock_monero_rpc, caplog
 ):
@@ -739,15 +777,18 @@ def test_combined_status_unknown_daemon_p2p_status(
     assert "host" in response[DAEMON_KEY]
     assert response[DAEMON_KEY]["host"] == "127.0.0.1"
     assert response[DAEMON_KEY]["status"] == DAEMON_STATUS_UNKNOWN
+    assert response[DAEMON_KEY]["version"] == 12
     assert DAEMON_RPC_KEY in response[DAEMON_KEY]
     assert DAEMON_P2P_KEY in response[DAEMON_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_KEY][DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_KEY][DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_KEY][DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert response[DAEMON_KEY][DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
-    assert response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_UNKNOWN
+    assert (
+        response[DAEMON_KEY][DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_UNKNOWN
+    )
 
     assert "error" in response[DAEMON_KEY][DAEMON_P2P_KEY]
     assert "error" in response[DAEMON_KEY][DAEMON_P2P_KEY]["error"]

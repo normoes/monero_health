@@ -9,7 +9,7 @@ from requests.exceptions import (
     Timeout,
 )
 
-from monero_health import (
+from monero_health.monero_health import (
     daemon_last_block_check,
     DAEMON_STATUS_OK,
     DAEMON_STATUS_ERROR,
@@ -17,8 +17,8 @@ from monero_health import (
 )
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.is_timestamp_within_offset")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.is_timestamp_within_offset")
 def test_last_block_recent(mock_time_range, mock_monero_rpc, caplog):
     mock_monero_rpc.return_value.get_last_block_header.return_value = {
         "block_header": {
@@ -45,13 +45,17 @@ def test_last_block_recent(mock_time_range, mock_monero_rpc, caplog):
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "INFO", "Wrong log message."
-        assert record.message == "Checking '127.0.0.1:18081'.", "Wrong log message."
+        assert (
+            record.message == "Checking '127.0.0.1:18081'."
+        ), "Wrong log message."
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.is_timestamp_within_offset")
-def test_last_block_not_recent_timestamp_old(mock_time_range, mock_monero_rpc, caplog):
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.is_timestamp_within_offset")
+def test_last_block_not_recent_timestamp_old(
+    mock_time_range, mock_monero_rpc, caplog
+):
     mock_monero_rpc.return_value.get_last_block_header.return_value = {
         "block_header": {
             "timestamp": "1576828533",
@@ -98,9 +102,11 @@ def test_last_block_not_recent_timestamp_old(mock_time_range, mock_monero_rpc, c
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.is_timestamp_within_offset")
-def test_last_block_not_recent_rpc_error(mock_time_range, mock_monero_rpc, caplog):
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.is_timestamp_within_offset")
+def test_last_block_not_recent_rpc_error(
+    mock_time_range, mock_monero_rpc, caplog
+):
     """Raises a JSONRPCException.
 
     Source: https://github.com/monero-ecosystem/python-monerorpc/blob/master/monerorpc/authproxy.py
@@ -126,7 +132,9 @@ def test_last_block_not_recent_rpc_error(mock_time_range, mock_monero_rpc, caplo
     assert "error" in response["error"]
     assert "message" in response["error"]
     assert response["error"]["error"] == "11: Some Monero RPC error."
-    assert response["error"]["message"] == "Cannot determine status.", "Wrong error."
+    assert (
+        response["error"]["message"] == "Cannot determine status."
+    ), "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -143,9 +151,11 @@ def test_last_block_not_recent_rpc_error(mock_time_range, mock_monero_rpc, caplo
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.is_timestamp_within_offset")
-def test_last_block_not_recent_read_timeout(mock_time_range, mock_monero_rpc, caplog):
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.is_timestamp_within_offset")
+def test_last_block_not_recent_read_timeout(
+    mock_time_range, mock_monero_rpc, caplog
+):
     """Raises a requests.exceptions.ReadTimeout
 
     """
@@ -169,8 +179,13 @@ def test_last_block_not_recent_read_timeout(mock_time_range, mock_monero_rpc, ca
     assert "error" in response
     assert "error" in response["error"]
     assert "message" in response["error"]
-    assert response["error"]["error"] == "Request timed out when reading response."
-    assert response["error"]["message"] == "Cannot determine status.", "Wrong error."
+    assert (
+        response["error"]["error"]
+        == "Request timed out when reading response."
+    )
+    assert (
+        response["error"]["message"] == "Cannot determine status."
+    ), "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -187,8 +202,8 @@ def test_last_block_not_recent_read_timeout(mock_time_range, mock_monero_rpc, ca
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.is_timestamp_within_offset")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.is_timestamp_within_offset")
 def test_last_block_not_recent_connection_error(
     mock_time_range, mock_monero_rpc, caplog
 ):
@@ -196,7 +211,9 @@ def test_last_block_not_recent_connection_error(
 
     """
 
-    mock_monero_rpc.side_effect = RequestsConnectionError("Error when connecting.")
+    mock_monero_rpc.side_effect = RequestsConnectionError(
+        "Error when connecting."
+    )
     mock_time_range.return_value = (True, 12, "minutes")
 
     response = daemon_last_block_check()
@@ -214,7 +231,9 @@ def test_last_block_not_recent_connection_error(
     assert "error" in response["error"]
     assert "message" in response["error"]
     assert response["error"]["error"] == "Error when connecting."
-    assert response["error"]["message"] == "Cannot determine status.", "Wrong error."
+    assert (
+        response["error"]["message"] == "Cannot determine status."
+    ), "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -225,13 +244,17 @@ def test_last_block_not_recent_connection_error(
             json_message["message"] == "Cannot determine status."
         ), "Wrong log message."
         assert "error" in json_message, "Wrong log message."
-        assert json_message["error"] == "Error when connecting.", "Wrong log message."
+        assert (
+            json_message["error"] == "Error when connecting."
+        ), "Wrong log message."
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
-@mock.patch("monero_health.is_timestamp_within_offset")
-def test_last_block_not_recent_timeout(mock_time_range, mock_monero_rpc, caplog):
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.is_timestamp_within_offset")
+def test_last_block_not_recent_timeout(
+    mock_time_range, mock_monero_rpc, caplog
+):
     """Raises a requests.exceptions.Timeout
 
     """
@@ -254,7 +277,9 @@ def test_last_block_not_recent_timeout(mock_time_range, mock_monero_rpc, caplog)
     assert "error" in response["error"]
     assert "message" in response["error"]
     assert response["error"]["error"] == "Request timed out."
-    assert response["error"]["message"] == "Cannot determine status.", "Wrong error."
+    assert (
+        response["error"]["message"] == "Cannot determine status."
+    ), "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -265,5 +290,7 @@ def test_last_block_not_recent_timeout(mock_time_range, mock_monero_rpc, caplog)
             json_message["message"] == "Cannot determine status."
         ), "Wrong log message."
         assert "error" in json_message, "Wrong log message."
-        assert json_message["error"] == "Request timed out.", "Wrong log message."
+        assert (
+            json_message["error"] == "Request timed out."
+        ), "Wrong log message."
     caplog.clear()

@@ -9,7 +9,7 @@ from requests.exceptions import (
     Timeout,
 )
 
-from monero_health import (
+from monero_health.monero_health import (
     daemon_rpc_status_check,
     DAEMON_STATUS_OK,
     DAEMON_STATUS_ERROR,
@@ -17,7 +17,7 @@ from monero_health import (
 )
 
 
-@mock.patch("monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
 def test_daemon_status_ok(mock_monero_rpc, caplog):
     mock_monero_rpc.return_value.hard_fork_info.return_value = {
         "status": DAEMON_STATUS_OK,
@@ -33,11 +33,13 @@ def test_daemon_status_ok(mock_monero_rpc, caplog):
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "INFO", "Wrong log message."
-        assert record.message == "Checking '127.0.0.1:18081'.", "Wrong log message."
+        assert (
+            record.message == "Checking '127.0.0.1:18081'."
+        ), "Wrong log message."
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
 def test_daemon_status_not_ok(mock_monero_rpc, caplog):
     mock_monero_rpc.return_value.hard_fork_info.return_value = {
         "status": DAEMON_STATUS_ERROR,
@@ -72,7 +74,7 @@ def test_daemon_status_not_ok(mock_monero_rpc, caplog):
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
 def test_daemon_status_not_ok_rpc_error(mock_monero_rpc, caplog):
     """Raises a JSONRPCException.
 
@@ -93,7 +95,9 @@ def test_daemon_status_not_ok_rpc_error(mock_monero_rpc, caplog):
     assert "error" in response["error"]
     assert "message" in response["error"]
     assert response["error"]["error"] == "11: Some Monero RPC error."
-    assert response["error"]["message"] == "Cannot determine status.", "Wrong error."
+    assert (
+        response["error"]["message"] == "Cannot determine status."
+    ), "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -110,7 +114,7 @@ def test_daemon_status_not_ok_rpc_error(mock_monero_rpc, caplog):
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
 def test_daemon_status_not_ok_read_timeout(mock_monero_rpc, caplog):
     """Raises a requests.exceptions.ReadTimeout
 
@@ -129,8 +133,13 @@ def test_daemon_status_not_ok_read_timeout(mock_monero_rpc, caplog):
     assert "error" in response
     assert "error" in response["error"]
     assert "message" in response["error"]
-    assert response["error"]["error"] == "Request timed out when reading response."
-    assert response["error"]["message"] == "Cannot determine status.", "Wrong error."
+    assert (
+        response["error"]["error"]
+        == "Request timed out when reading response."
+    )
+    assert (
+        response["error"]["message"] == "Cannot determine status."
+    ), "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -147,13 +156,15 @@ def test_daemon_status_not_ok_read_timeout(mock_monero_rpc, caplog):
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
 def test_daemon_status_not_ok_connection_error(mock_monero_rpc, caplog):
     """Raises a requests.exceptions.ConnectionError
 
     """
 
-    mock_monero_rpc.side_effect = RequestsConnectionError("Error when connecting.")
+    mock_monero_rpc.side_effect = RequestsConnectionError(
+        "Error when connecting."
+    )
 
     response = daemon_rpc_status_check()
 
@@ -165,7 +176,9 @@ def test_daemon_status_not_ok_connection_error(mock_monero_rpc, caplog):
     assert "error" in response["error"]
     assert "message" in response["error"]
     assert response["error"]["error"] == "Error when connecting."
-    assert response["error"]["message"] == "Cannot determine status.", "Wrong error."
+    assert (
+        response["error"]["message"] == "Cannot determine status."
+    ), "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -176,11 +189,13 @@ def test_daemon_status_not_ok_connection_error(mock_monero_rpc, caplog):
             json_message["message"] == "Cannot determine status."
         ), "Wrong log message."
         assert "error" in json_message, "Wrong log message."
-        assert json_message["error"] == "Error when connecting.", "Wrong log message."
+        assert (
+            json_message["error"] == "Error when connecting."
+        ), "Wrong log message."
     caplog.clear()
 
 
-@mock.patch("monero_health.AuthServiceProxy")
+@mock.patch("monero_health.monero_health.AuthServiceProxy")
 def test_daemon_status_not_ok_timeout(mock_monero_rpc, caplog):
     """Raises a requests.exceptions.Timeout
 
@@ -198,7 +213,9 @@ def test_daemon_status_not_ok_timeout(mock_monero_rpc, caplog):
     assert "error" in response["error"]
     assert "message" in response["error"]
     assert response["error"]["error"] == "Request timed out."
-    assert response["error"]["message"] == "Cannot determine status.", "Wrong error."
+    assert (
+        response["error"]["message"] == "Cannot determine status."
+    ), "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
@@ -209,5 +226,7 @@ def test_daemon_status_not_ok_timeout(mock_monero_rpc, caplog):
             json_message["message"] == "Cannot determine status."
         ), "Wrong log message."
         assert "error" in json_message, "Wrong log message."
-        assert json_message["error"] == "Request timed out.", "Wrong log message."
+        assert (
+            json_message["error"] == "Request timed out."
+        ), "Wrong log message."
     caplog.clear()

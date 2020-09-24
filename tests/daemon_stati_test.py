@@ -2,7 +2,7 @@ import mock
 import logging
 import json
 
-from monero_health import (
+from monero_health.monero_health import (
     daemon_stati_check,
     DAEMON_STATUS_OK,
     DAEMON_STATUS_ERROR,
@@ -12,9 +12,11 @@ from monero_health import (
 )
 
 
-@mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.daemon_p2p_status_check")
-def test_daemon_stati_ok(mock_daemon_p2p_status, mock_daemon_rpc_status, caplog):
+@mock.patch("monero_health.monero_health.daemon_rpc_status_check")
+@mock.patch("monero_health.monero_health.daemon_p2p_status_check")
+def test_daemon_stati_ok(
+    mock_daemon_p2p_status, mock_daemon_rpc_status, caplog
+):
     rpc_result = {
         "status": DAEMON_STATUS_OK,
         "version": 12,
@@ -28,9 +30,10 @@ def test_daemon_stati_ok(mock_daemon_p2p_status, mock_daemon_rpc_status, caplog)
     }
     mock_daemon_p2p_status.return_value = p2p_result
 
-    response = daemon_stati_check()
+    response = daemon_stati_check(consider_p2p=True,)
 
     assert response["status"] == DAEMON_STATUS_OK
+    assert response["version"] == 12
     assert response["host"] == "127.0.0.1"
 
     assert DAEMON_RPC_KEY in response
@@ -38,7 +41,7 @@ def test_daemon_stati_ok(mock_daemon_p2p_status, mock_daemon_rpc_status, caplog)
     assert "host" in response[DAEMON_RPC_KEY]
     assert response[DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_P2P_KEY]
     assert response[DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_OK
@@ -55,9 +58,11 @@ def test_daemon_stati_ok(mock_daemon_p2p_status, mock_daemon_rpc_status, caplog)
     caplog.clear()
 
 
-@mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.daemon_p2p_status_check")
-def test_daemon_stati_rpc_error(mock_daemon_p2p_status, mock_daemon_rpc_status, caplog):
+@mock.patch("monero_health.monero_health.daemon_rpc_status_check")
+@mock.patch("monero_health.monero_health.daemon_p2p_status_check")
+def test_daemon_stati_rpc_error(
+    mock_daemon_p2p_status, mock_daemon_rpc_status, caplog
+):
     caplog.set_level(logging.INFO, logger="DaemonHealth")
     rpc_result = {
         "status": DAEMON_STATUS_ERROR,
@@ -76,9 +81,10 @@ def test_daemon_stati_rpc_error(mock_daemon_p2p_status, mock_daemon_rpc_status, 
     }
     mock_daemon_p2p_status.return_value = p2p_result
 
-    response = daemon_stati_check()
+    response = daemon_stati_check(consider_p2p=True,)
 
     assert response["status"] == DAEMON_STATUS_ERROR
+    assert response["version"] == 12
     assert response["host"] == "127.0.0.1"
 
     assert DAEMON_RPC_KEY in response
@@ -86,7 +92,7 @@ def test_daemon_stati_rpc_error(mock_daemon_p2p_status, mock_daemon_rpc_status, 
     assert "host" in response[DAEMON_RPC_KEY]
     assert response[DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_ERROR
-    assert response[DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_P2P_KEY]
     assert response[DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_OK
@@ -94,7 +100,9 @@ def test_daemon_stati_rpc_error(mock_daemon_p2p_status, mock_daemon_rpc_status, 
     assert "error" in response[DAEMON_RPC_KEY]
     assert "error" in response[DAEMON_RPC_KEY]["error"]
     assert "message" in response[DAEMON_RPC_KEY]["error"]
-    assert response[DAEMON_RPC_KEY]["error"]["error"] == "Some error.", "Wrong error."
+    assert (
+        response[DAEMON_RPC_KEY]["error"]["error"] == "Some error."
+    ), "Wrong error."
     assert (
         response[DAEMON_RPC_KEY]["error"]["message"]
         == f"Status is '{DAEMON_STATUS_ERROR}'."
@@ -112,8 +120,8 @@ def test_daemon_stati_rpc_error(mock_daemon_p2p_status, mock_daemon_rpc_status, 
     caplog.clear()
 
 
-@mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.daemon_p2p_status_check")
+@mock.patch("monero_health.monero_health.daemon_rpc_status_check")
+@mock.patch("monero_health.monero_health.daemon_p2p_status_check")
 def test_daemon_stati_rpc_unknown(
     mock_daemon_p2p_status, mock_daemon_rpc_status, caplog
 ):
@@ -121,7 +129,10 @@ def test_daemon_stati_rpc_unknown(
         "status": DAEMON_STATUS_UNKNOWN,
         "version": -1,
         "host": "127.0.0.1:18081",
-        "error": {"error": "Some error.", "message": "Cannot determine status."},
+        "error": {
+            "error": "Some error.",
+            "message": "Cannot determine status.",
+        },
     }
     mock_daemon_rpc_status.return_value = rpc_result
 
@@ -131,9 +142,10 @@ def test_daemon_stati_rpc_unknown(
     }
     mock_daemon_p2p_status.return_value = p2p_result
 
-    response = daemon_stati_check()
+    response = daemon_stati_check(consider_p2p=True,)
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
+    assert response["version"] == -1
     assert response["host"] == "127.0.0.1"
 
     assert DAEMON_RPC_KEY in response
@@ -141,7 +153,7 @@ def test_daemon_stati_rpc_unknown(
     assert "host" in response[DAEMON_RPC_KEY]
     assert response[DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_UNKNOWN
-    assert response[DAEMON_RPC_KEY]["version"] == -1
+    assert "version" not in response[DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_P2P_KEY]
     assert response[DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_OK
@@ -149,9 +161,12 @@ def test_daemon_stati_rpc_unknown(
     assert "error" in response[DAEMON_RPC_KEY]
     assert "error" in response[DAEMON_RPC_KEY]["error"]
     assert "message" in response[DAEMON_RPC_KEY]["error"]
-    assert response[DAEMON_RPC_KEY]["error"]["error"] == "Some error.", "Wrong error."
     assert (
-        response[DAEMON_RPC_KEY]["error"]["message"] == "Cannot determine status."
+        response[DAEMON_RPC_KEY]["error"]["error"] == "Some error."
+    ), "Wrong error."
+    assert (
+        response[DAEMON_RPC_KEY]["error"]["message"]
+        == "Cannot determine status."
     ), "Wrong error."
 
     assert len(caplog.records) == 1
@@ -166,8 +181,8 @@ def test_daemon_stati_rpc_unknown(
     caplog.clear()
 
 
-@mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.daemon_p2p_status_check")
+@mock.patch("monero_health.monero_health.daemon_rpc_status_check")
+@mock.patch("monero_health.monero_health.daemon_p2p_status_check")
 def test_daemon_stati_ignore_p2p_error(
     mock_daemon_p2p_status, mock_daemon_rpc_status, caplog
 ):
@@ -192,6 +207,7 @@ def test_daemon_stati_ignore_p2p_error(
     response = daemon_stati_check()
 
     assert response["status"] == DAEMON_STATUS_OK
+    assert response["version"] == 12
     assert response["host"] == "127.0.0.1"
 
     assert DAEMON_RPC_KEY in response
@@ -199,7 +215,7 @@ def test_daemon_stati_ignore_p2p_error(
     assert "host" in response[DAEMON_RPC_KEY]
     assert response[DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_P2P_KEY]
     assert response[DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_ERROR
@@ -207,7 +223,9 @@ def test_daemon_stati_ignore_p2p_error(
     assert "error" in response[DAEMON_P2P_KEY]
     assert "error" in response[DAEMON_P2P_KEY]["error"]
     assert "message" in response[DAEMON_P2P_KEY]["error"]
-    assert response[DAEMON_P2P_KEY]["error"]["error"] == "Some error.", "Wrong error."
+    assert (
+        response[DAEMON_P2P_KEY]["error"]["error"] == "Some error."
+    ), "Wrong error."
     assert (
         response[DAEMON_P2P_KEY]["error"]["message"]
         == f"Status is '{DAEMON_STATUS_ERROR}'."
@@ -225,9 +243,11 @@ def test_daemon_stati_ignore_p2p_error(
     caplog.clear()
 
 
-@mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.daemon_p2p_status_check")
-def test_daemon_stati_p2p_error(mock_daemon_p2p_status, mock_daemon_rpc_status, caplog):
+@mock.patch("monero_health.monero_health.daemon_rpc_status_check")
+@mock.patch("monero_health.monero_health.daemon_p2p_status_check")
+def test_daemon_stati_p2p_error(
+    mock_daemon_p2p_status, mock_daemon_rpc_status, caplog
+):
     caplog.set_level(logging.INFO, logger="DaemonHealth")
     rpc_result = {
         "status": DAEMON_STATUS_OK,
@@ -249,6 +269,7 @@ def test_daemon_stati_p2p_error(mock_daemon_p2p_status, mock_daemon_rpc_status, 
     response = daemon_stati_check(consider_p2p=True)
 
     assert response["status"] == DAEMON_STATUS_ERROR
+    assert response["version"] == 12
     assert response["host"] == "127.0.0.1"
 
     assert DAEMON_RPC_KEY in response
@@ -256,7 +277,7 @@ def test_daemon_stati_p2p_error(mock_daemon_p2p_status, mock_daemon_rpc_status, 
     assert "host" in response[DAEMON_RPC_KEY]
     assert response[DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_P2P_KEY]
     assert response[DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_ERROR
@@ -264,7 +285,9 @@ def test_daemon_stati_p2p_error(mock_daemon_p2p_status, mock_daemon_rpc_status, 
     assert "error" in response[DAEMON_P2P_KEY]
     assert "error" in response[DAEMON_P2P_KEY]["error"]
     assert "message" in response[DAEMON_P2P_KEY]["error"]
-    assert response[DAEMON_P2P_KEY]["error"]["error"] == "Some error.", "Wrong error."
+    assert (
+        response[DAEMON_P2P_KEY]["error"]["error"] == "Some error."
+    ), "Wrong error."
     assert (
         response[DAEMON_P2P_KEY]["error"]["message"]
         == f"Status is '{DAEMON_STATUS_ERROR}'."
@@ -282,8 +305,8 @@ def test_daemon_stati_p2p_error(mock_daemon_p2p_status, mock_daemon_rpc_status, 
     caplog.clear()
 
 
-@mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.daemon_p2p_status_check")
+@mock.patch("monero_health.monero_health.daemon_rpc_status_check")
+@mock.patch("monero_health.monero_health.daemon_p2p_status_check")
 def test_daemon_stati_ignore_p2p_unknown(
     mock_daemon_p2p_status, mock_daemon_rpc_status, caplog
 ):
@@ -297,13 +320,17 @@ def test_daemon_stati_ignore_p2p_unknown(
     p2p_result = {
         "status": DAEMON_STATUS_UNKNOWN,
         "host": "127.0.0.1:18080",
-        "error": {"error": "Some error.", "message": "Cannot determine status."},
+        "error": {
+            "error": "Some error.",
+            "message": "Cannot determine status.",
+        },
     }
     mock_daemon_p2p_status.return_value = p2p_result
 
     response = daemon_stati_check()
 
     assert response["status"] == DAEMON_STATUS_OK
+    assert response["version"] == 12
     assert response["host"] == "127.0.0.1"
 
     assert DAEMON_RPC_KEY in response
@@ -311,7 +338,7 @@ def test_daemon_stati_ignore_p2p_unknown(
     assert "host" in response[DAEMON_RPC_KEY]
     assert response[DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_P2P_KEY]
     assert response[DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_UNKNOWN
@@ -319,9 +346,12 @@ def test_daemon_stati_ignore_p2p_unknown(
     assert "error" in response[DAEMON_P2P_KEY]
     assert "error" in response[DAEMON_P2P_KEY]["error"]
     assert "message" in response[DAEMON_P2P_KEY]["error"]
-    assert response[DAEMON_P2P_KEY]["error"]["error"] == "Some error.", "Wrong error."
     assert (
-        response[DAEMON_P2P_KEY]["error"]["message"] == "Cannot determine status."
+        response[DAEMON_P2P_KEY]["error"]["error"] == "Some error."
+    ), "Wrong error."
+    assert (
+        response[DAEMON_P2P_KEY]["error"]["message"]
+        == "Cannot determine status."
     ), "Wrong error."
 
     assert len(caplog.records) == 1
@@ -336,8 +366,8 @@ def test_daemon_stati_ignore_p2p_unknown(
     caplog.clear()
 
 
-@mock.patch("monero_health.daemon_rpc_status_check")
-@mock.patch("monero_health.daemon_p2p_status_check")
+@mock.patch("monero_health.monero_health.daemon_rpc_status_check")
+@mock.patch("monero_health.monero_health.daemon_p2p_status_check")
 def test_daemon_stati_p2p_unknown(
     mock_daemon_p2p_status, mock_daemon_rpc_status, caplog
 ):
@@ -351,13 +381,17 @@ def test_daemon_stati_p2p_unknown(
     p2p_result = {
         "status": DAEMON_STATUS_UNKNOWN,
         "host": "127.0.0.1:18080",
-        "error": {"error": "Some error.", "message": "Cannot determine status."},
+        "error": {
+            "error": "Some error.",
+            "message": "Cannot determine status.",
+        },
     }
     mock_daemon_p2p_status.return_value = p2p_result
 
     response = daemon_stati_check(consider_p2p=True)
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
+    assert response["version"] == 12
     assert response["host"] == "127.0.0.1"
 
     assert DAEMON_RPC_KEY in response
@@ -365,7 +399,7 @@ def test_daemon_stati_p2p_unknown(
     assert "host" in response[DAEMON_RPC_KEY]
     assert response[DAEMON_RPC_KEY]["host"] == "127.0.0.1:18081"
     assert response[DAEMON_RPC_KEY]["status"] == DAEMON_STATUS_OK
-    assert response[DAEMON_RPC_KEY]["version"] == 12
+    assert "version" not in response[DAEMON_RPC_KEY]
     assert "host" in response[DAEMON_P2P_KEY]
     assert response[DAEMON_P2P_KEY]["host"] == "127.0.0.1:18080"
     assert response[DAEMON_P2P_KEY]["status"] == DAEMON_STATUS_UNKNOWN
@@ -373,9 +407,12 @@ def test_daemon_stati_p2p_unknown(
     assert "error" in response[DAEMON_P2P_KEY]
     assert "error" in response[DAEMON_P2P_KEY]["error"]
     assert "message" in response[DAEMON_P2P_KEY]["error"]
-    assert response[DAEMON_P2P_KEY]["error"]["error"] == "Some error.", "Wrong error."
     assert (
-        response[DAEMON_P2P_KEY]["error"]["message"] == "Cannot determine status."
+        response[DAEMON_P2P_KEY]["error"]["error"] == "Some error."
+    ), "Wrong error."
+    assert (
+        response[DAEMON_P2P_KEY]["error"]["message"]
+        == "Cannot determine status."
     ), "Wrong error."
 
     assert len(caplog.records) == 1

@@ -3,7 +3,7 @@ import logging
 import json
 import socket
 
-from monero_health import (
+from monero_health.monero_health import (
     daemon_p2p_status_check,
     DAEMON_STATUS_OK,
     DAEMON_STATUS_ERROR,
@@ -11,7 +11,9 @@ from monero_health import (
 )
 
 
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_daemon_p2p_status_ok(mock_socket, caplog):
 
     response = daemon_p2p_status_check()
@@ -22,11 +24,15 @@ def test_daemon_p2p_status_ok(mock_socket, caplog):
     assert len(caplog.records) == 1
     for record in caplog.records:
         assert record.levelname == "INFO", "Wrong log message."
-        assert record.message == "Checking '127.0.0.1:18080'.", "Wrong log message."
+        assert (
+            record.message == "Checking '127.0.0.1:18080'."
+        ), "Wrong log message."
     caplog.clear()
 
 
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_daemon_status_peer_error(mock_socket, caplog):
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
@@ -40,7 +46,9 @@ def test_daemon_status_peer_error(mock_socket, caplog):
     assert "error" in response
     assert "error" in response["error"]
     assert "message" in response["error"]
-    assert response["error"]["error"] == f"Something went wrong.", "Wrong error."
+    assert (
+        response["error"]["error"] == f"Something went wrong."
+    ), "Wrong error."
     assert (
         response["error"]["message"] == f"Status is '{DAEMON_STATUS_ERROR}'."
     ), "Wrong error."
@@ -56,7 +64,9 @@ def test_daemon_status_peer_error(mock_socket, caplog):
     caplog.clear()
 
 
-@mock.patch("monero_health.connect_to_node.try_to_connect_keep_errors")
+@mock.patch(
+    "monero_health.monero_health.connect_to_node.try_to_connect_keep_errors"
+)
 def test_daemon_status_connectivity_error(mock_socket, caplog):
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
@@ -70,8 +80,12 @@ def test_daemon_status_connectivity_error(mock_socket, caplog):
     assert "error" in response
     assert "error" in response["error"]
     assert "message" in response["error"]
-    assert response["error"]["error"] == f"Something went wrong.", "Wrong error."
-    assert response["error"]["message"] == f"Cannot determine status.", "Wrong error."
+    assert (
+        response["error"]["error"] == f"Something went wrong."
+    ), "Wrong error."
+    assert (
+        response["error"]["message"] == f"Cannot determine status."
+    ), "Wrong error."
 
     assert len(caplog.records) == 1
     for record in caplog.records:
