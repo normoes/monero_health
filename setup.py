@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-VERSION = "v1.1.4"
+VERSION = "v1.1.5"
 
 setup(
     name="monero_health",
@@ -10,8 +10,8 @@ setup(
     author_email="norman.moeschter@gmail.com",
     maintainer="Norman Moeschter-Schenck",
     maintainer_email="<norman.moeschter@gmail.com>",
-    url="https://github.com/normoes/monero_health",
-    download_url=f"https://github.com/normoes/monero_health/archive/{VERSION}.tar.gz",
+    url="https://github.com/monero-ecosystem/monero_health",
+    download_url=f"https://github.com/monero-ecosystem/monero_health/archive/{VERSION}.tar.gz",
     description=("Check health of monero daemons."),
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
