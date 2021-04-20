@@ -4,22 +4,39 @@
 #
 #    pip-compile --output-file=requirements.txt requirements.in
 #
-attrs==20.3.0             # via pytest
-certifi==2020.11.8        # via requests
-chardet==3.0.4            # via requests
-idna==2.10                # via requests
-importlib-metadata==3.0.0  # via pluggy, pytest
-iniconfig==1.1.1          # via pytest
-mock==4.0.2               # via -r requirements.in
-monero-scripts==0.1.3     # via -r requirements.in
-packaging==20.4           # via pytest
-pluggy==0.13.1            # via pytest
-py==1.9.0                 # via pytest
-pyparsing==2.4.7          # via packaging
-pytest==6.1.2             # via -r requirements.in
-python-monerorpc==0.6.1   # via -r requirements.in
-requests==2.25.0          # via monero-scripts, python-monerorpc
-six==1.15.0               # via packaging
-toml==0.10.2              # via pytest
-urllib3==1.26.2           # via requests
-zipp==3.4.0               # via importlib-metadata
+attrs==20.3.0
+    # via pytest
+certifi==2020.11.8
+    # via requests
+chardet==3.0.4
+    # via requests
+idna==2.10
+    # via requests
+iniconfig==1.1.1
+    # via pytest
+mock==4.0.2
+    # via -r requirements.in
+monero-scripts==0.1.3
+    # via -r requirements.in
+packaging==20.4
+    # via pytest
+pluggy==0.13.1
+    # via pytest
+py==1.10.0
+    # via pytest
+pyparsing==2.4.7
+    # via packaging
+pytest==6.1.2
+    # via -r requirements.in
+python-monerorpc==0.6.1
+    # via -r requirements.in
+requests==2.25.0
+    # via
+    #   monero-scripts
+    #   python-monerorpc
+six==1.15.0
+    # via packaging
+toml==0.10.2
+    # via pytest
+urllib3==1.26.2
+    # via requests
