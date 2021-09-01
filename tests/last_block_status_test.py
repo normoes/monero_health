@@ -156,9 +156,7 @@ def test_last_block_not_recent_rpc_error(
 def test_last_block_not_recent_read_timeout(
     mock_time_range, mock_monero_rpc, caplog
 ):
-    """Raises a requests.exceptions.ReadTimeout
-
-    """
+    """Raises a requests.exceptions.ReadTimeout"""
 
     mock_monero_rpc.side_effect = ReadTimeout(
         "Request timed out when reading response."
@@ -207,9 +205,7 @@ def test_last_block_not_recent_read_timeout(
 def test_last_block_not_recent_connection_error(
     mock_time_range, mock_monero_rpc, caplog
 ):
-    """Raises a requests.exceptions.ConnectionError
-
-    """
+    """Raises a requests.exceptions.ConnectionError"""
 
     mock_monero_rpc.side_effect = RequestsConnectionError(
         "Error when connecting."
@@ -255,9 +251,7 @@ def test_last_block_not_recent_connection_error(
 def test_last_block_not_recent_timeout(
     mock_time_range, mock_monero_rpc, caplog
 ):
-    """Raises a requests.exceptions.Timeout
-
-    """
+    """Raises a requests.exceptions.Timeout"""
 
     mock_monero_rpc.side_effect = Timeout("Request timed out.")
     mock_time_range.return_value = (True, 12, "minutes")

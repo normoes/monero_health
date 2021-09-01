@@ -490,7 +490,9 @@ def test_combined_status_unknown_last_block_status(
 
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
-    response = daemon_combined_status_check(consider_p2p=True,)
+    response = daemon_combined_status_check(
+        consider_p2p=True,
+    )
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
     assert response["host"] == "127.0.0.1"
@@ -574,7 +576,9 @@ def test_combined_status_unknown_daemon_rpc_status(
 
     caplog.set_level(logging.ERROR, logger="DaemonHealth")
 
-    response = daemon_combined_status_check(consider_p2p=True,)
+    response = daemon_combined_status_check(
+        consider_p2p=True,
+    )
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
     assert response["host"] == "127.0.0.1"
