@@ -30,7 +30,9 @@ def test_daemon_stati_ok(
     }
     mock_daemon_p2p_status.return_value = p2p_result
 
-    response = daemon_stati_check(consider_p2p=True,)
+    response = daemon_stati_check(
+        consider_p2p=True,
+    )
 
     assert response["status"] == DAEMON_STATUS_OK
     assert response["version"] == 12
@@ -81,7 +83,9 @@ def test_daemon_stati_rpc_error(
     }
     mock_daemon_p2p_status.return_value = p2p_result
 
-    response = daemon_stati_check(consider_p2p=True,)
+    response = daemon_stati_check(
+        consider_p2p=True,
+    )
 
     assert response["status"] == DAEMON_STATUS_ERROR
     assert response["version"] == 12
@@ -142,7 +146,9 @@ def test_daemon_stati_rpc_unknown(
     }
     mock_daemon_p2p_status.return_value = p2p_result
 
-    response = daemon_stati_check(consider_p2p=True,)
+    response = daemon_stati_check(
+        consider_p2p=True,
+    )
 
     assert response["status"] == DAEMON_STATUS_UNKNOWN
     assert response["version"] == -1

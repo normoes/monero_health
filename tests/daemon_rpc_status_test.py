@@ -116,9 +116,7 @@ def test_daemon_status_not_ok_rpc_error(mock_monero_rpc, caplog):
 
 @mock.patch("monero_health.monero_health.AuthServiceProxy")
 def test_daemon_status_not_ok_read_timeout(mock_monero_rpc, caplog):
-    """Raises a requests.exceptions.ReadTimeout
-
-    """
+    """Raises a requests.exceptions.ReadTimeout"""
 
     mock_monero_rpc.side_effect = ReadTimeout(
         "Request timed out when reading response."
@@ -158,9 +156,7 @@ def test_daemon_status_not_ok_read_timeout(mock_monero_rpc, caplog):
 
 @mock.patch("monero_health.monero_health.AuthServiceProxy")
 def test_daemon_status_not_ok_connection_error(mock_monero_rpc, caplog):
-    """Raises a requests.exceptions.ConnectionError
-
-    """
+    """Raises a requests.exceptions.ConnectionError"""
 
     mock_monero_rpc.side_effect = RequestsConnectionError(
         "Error when connecting."
@@ -197,9 +193,7 @@ def test_daemon_status_not_ok_connection_error(mock_monero_rpc, caplog):
 
 @mock.patch("monero_health.monero_health.AuthServiceProxy")
 def test_daemon_status_not_ok_timeout(mock_monero_rpc, caplog):
-    """Raises a requests.exceptions.Timeout
-
-    """
+    """Raises a requests.exceptions.Timeout"""
 
     mock_monero_rpc.side_effect = Timeout("Request timed out.")
 
